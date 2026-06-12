@@ -18,6 +18,7 @@ function startObserver() {
                 const newTitle = titleEl.innerText.trim();
                 if (newTitle && newTitle !== currentChatTitle) {
                     currentChatTitle = newTitle;
+                    console.log(`[RefineAI content.js] Chat title switched to: "${newTitle}"`);
                     chrome.runtime.sendMessage({ action: "NEW_MESSAGE_DETECTED" }); // Trigger refresh on switch
                 }
             }
@@ -48,6 +49,7 @@ function startObserver() {
 
         if (detected) {
             lastUpdate = now;
+            console.log('[RefineAI content.js] New message or DOM change detected inside the chat container (#main). Notifying sidepanel...');
             chrome.runtime.sendMessage({ action: "NEW_MESSAGE_DETECTED" });
         }
     });
@@ -96,6 +98,7 @@ function findComposeBox(url) {
 // Content Script for Inserting Text
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "INSERT_TEXT") {
+        console.log(`[RefineAI content.js] INSERT_TEXT message received. Text length: ${request.text ? request.text.length : 0}`);
         const url = window.location.href;
         const activeElement = document.activeElement;
         let composeBox = null;
@@ -107,6 +110,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         if (composeBox) {
+            console.log('[RefineAI content.js] Found compose box in DOM. Focusing compose box...');
             composeBox.focus();
             const isContentEditable = composeBox.contentEditable === 'true' || composeBox.role === 'textbox';
 
@@ -132,8 +136,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 composeBox.dispatchEvent(new Event('input', { bubbles: true }));
                 composeBox.dispatchEvent(new Event('change', { bubbles: true }));
             }
+            console.log('[RefineAI content.js] Text successfully inserted into compose box.');
             sendResponse({ status: "success" });
         } else {
+            console.warn('[RefineAI content.js] No focusable compose box found in DOM.');
             sendResponse({ status: "no_active_element" });
         }
     } else if (request.action === "SCRAPE_MESSAGES") {
@@ -161,6 +167,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 const titleEl = document.querySelector('#main header span[dir="auto"], #main header ._amig, header canvas + div span');
                 if (titleEl) chatTitle = titleEl.innerText.trim() || titleEl.getAttribute('title');
 
+                console.log(`[RefineAI content.js] Scraping messages for WhatsApp chat "${chatTitle}". Found ${waMessages.length} elements in DOM.`);
                 const seenIds = new Set();
                 const processedMessages = [];
 
@@ -215,10 +222,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     text = text.replace(/\d{1,2}:\d{2}\s?(AM|PM|am|pm)?$/gi, '').trim();
 
                     if (text) {
+                        console.log(`[RefineAI content.js] Scraped message: "${text.substring(0, 40)}..." | sender: ${isMe ? 'Me' : 'Them'} (hasStatusIcon: ${!!hasStatusIcon}, msgId: ${msgId})`);
                         processedMessages.push({ text, sender: isMe ? 'Me' : 'Them' });
                     }
                 }
                 messages = processedMessages;
+                console.log(`[RefineAI content.js] Finished scraping. Total processed messages sent to sidepanel: ${messages.length}`);
             }
             else if (url.includes('mail.google.com')) {
                 const gmailMessages = document.querySelectorAll('.adn.ads, div[role="listitem"]');
@@ -282,6 +291,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse({ status: "error", message: e.message });
         }
     } else if (request.action === "SEND_MESSAGE") {
+        console.log('[RefineAI content.js] SEND_MESSAGE request received.');
         const findAndClickSend = (attempts = 0) => {
             try {
                 const url = window.location.href;
@@ -303,14 +313,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
 
                 if (sendBtn && !sendBtn.disabled) {
+                    console.log(`[RefineAI content.js] Send button found. Clicking send (attempt ${attempts + 1})...`);
                     sendBtn.click();
                     sendResponse({ status: "success" });
                     return;
                 }
 
                 if (attempts < 10) {
+                    console.log(`[RefineAI content.js] Send button not found or disabled. Retrying in 100ms... (attempt ${attempts + 1}/10)`);
                     setTimeout(() => findAndClickSend(attempts + 1), 100);
                 } else {
+                    console.warn('[RefineAI content.js] Send button not found or disabled after 10 attempts. Falling back to Enter key...');
                     // Fallback to Enter key
                     const active = document.activeElement;
                     if (active) {
@@ -319,6 +332,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     sendResponse({ status: "success", info: "Attempted Enter key fallback" });
                 }
             } catch (err) {
+                console.error('[RefineAI content.js] Error in findAndClickSend:', err);
                 sendResponse({ status: "error", message: err.message });
             }
         };

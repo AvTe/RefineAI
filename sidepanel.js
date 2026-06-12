@@ -1323,9 +1323,12 @@ If not, refine them before final output.`;
   if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (request.action === "NEW_MESSAGE_DETECTED") {
-        // Refresh if in smart view
+        console.log('[RefineAI sidepanel.js] NEW_MESSAGE_DETECTED signal received from content script.');
         if (views.smart.classList.contains('active')) {
+          console.log('[RefineAI sidepanel.js] Sidepanel is in Smart Reply view. Triggering automated refresh...');
           refreshActiveChat(true);
+        } else {
+          console.log('[RefineAI sidepanel.js] Sidepanel is NOT in Smart Reply view. Ignoring signal.');
         }
       }
     });
@@ -1334,21 +1337,35 @@ If not, refine them before final output.`;
   const refreshActiveChat = async (isAutomated = false) => {
     try {
       if (typeof chrome === 'undefined' || !chrome.tabs?.query) {
+        console.log('[RefineAI sidepanel.js] chrome.tabs.query is unavailable (web/mock mode).');
         return;
       }
+      console.log(`[RefineAI sidepanel.js] refreshActiveChat() invoked. isAutomated: ${isAutomated}`);
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab || !tab.url) return;
+      if (!tab || !tab.url) {
+        console.log('[RefineAI sidepanel.js] No active tab or tab URL found.');
+        return;
+      }
 
       const isSupported = tab.url.includes('whatsapp.com') || tab.url.includes('linkedin.com') || tab.url.includes('chat.google.com') || tab.url.includes('slack.com');
-      if (!isSupported) return;
+      if (!isSupported) {
+        console.log(`[RefineAI sidepanel.js] Current tab URL is not supported: ${tab.url}`);
+        return;
+      }
 
+      console.log('[RefineAI sidepanel.js] Sending SCRAPE_MESSAGES command to content script...');
       chrome.tabs.sendMessage(tab.id, { action: "SCRAPE_MESSAGES" }, (response) => {
-        if (chrome.runtime.lastError) return;
+        if (chrome.runtime.lastError) {
+          console.warn('[RefineAI sidepanel.js] Error sending message to content script:', chrome.runtime.lastError.message);
+          return;
+        }
         if (response && response.status === 'success') {
           let chatTitle = response.chatTitle || "Unknown Chat";
+          console.log(`[RefineAI sidepanel.js] Scraping response success! Chat Title: "${chatTitle}" | Scraped messages count: ${response.messages.length}`);
 
           // --- 1. HANDLE "UNKNOWN CHAT" RESOLUTION ---
           if (currentChatId === "Unknown Chat" && chatTitle !== "Unknown Chat") {
+            console.log('[RefineAI sidepanel.js] Resolving "Unknown Chat" to its real title:', chatTitle);
             if (smartChats[chatTitle]) {
               delete smartChats[currentChatId];
               currentChatId = chatTitle;
@@ -1365,11 +1382,14 @@ If not, refine them before final output.`;
 
           // --- 2. HANDLE CONTEXT SWITCHING / ZERO-CLICK OPEN ---
           if (!currentChatId || (currentChatId !== chatTitle && chatTitle !== "Unknown Chat")) {
+            console.log(`[RefineAI sidepanel.js] Context switch detected. currentChatId: "${currentChatId}" -> chatTitle: "${chatTitle}"`);
             if (chatTitle !== "Unknown Chat" || !isAutomated) {
               if (smartChats[chatTitle]) {
+                console.log('[RefineAI sidepanel.js] Switching to existing chat history for:', chatTitle);
                 currentChatId = chatTitle;
                 openChat(currentChatId);
               } else {
+                console.log('[RefineAI sidepanel.js] Registering and opening new chat for:', chatTitle);
                 startNewChat(chatTitle, response.messages);
               }
             }
@@ -1383,6 +1403,7 @@ If not, refine them before final output.`;
           const newMsgs = JSON.stringify(response.messages);
 
           if (currentMsgs !== newMsgs) {
+            console.log('[RefineAI sidepanel.js] Message list differences detected. Updating chat history UI...');
             smartChats[currentChatId].messages = response.messages;
             smartChats[currentChatId].timestamp = Date.now();
             saveSmartChats();
@@ -1390,10 +1411,16 @@ If not, refine them before final output.`;
             updateChatHistory(response.messages);
 
             const lastMsg = response.messages[response.messages.length - 1];
+            console.log(`[RefineAI sidepanel.js] Last message is from: "${lastMsg?.sender}" | Auto-Reply Toggle: ${autoReplyToggle.checked}`);
             if (autoReplyToggle.checked && lastMsg && lastMsg.sender === 'Them') {
+              console.log('[RefineAI sidepanel.js] Triggering auto-reply AI suggestion generation...');
               getSmartSuggestions(response.messages, response.chatTitle, isAutomated);
             }
+          } else {
+            console.log('[RefineAI sidepanel.js] Message list is identical. No UI update needed.');
           }
+        } else {
+          console.warn('[RefineAI sidepanel.js] Scraper response was unsuccessful:', response);
         }
       });
     } catch (e) {
