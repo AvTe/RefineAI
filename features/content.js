@@ -70,34 +70,70 @@ new MutationObserver(() => {
     }
 }).observe(document, { subtree: true, childList: true });
 
+function findComposeBox(url) {
+    if (url.includes('whatsapp.com')) {
+        return document.querySelector('[data-testid="conversation-compose-box-input"]') || 
+               document.querySelector('div[contenteditable="true"][data-tab="10"]') ||
+               document.querySelector('div[contenteditable="true"][data-tab="6"]') ||
+               document.querySelector('#main footer div[contenteditable="true"]');
+    }
+    if (url.includes('linkedin.com')) {
+        return document.querySelector('.msg-form__contenteditable') || 
+               document.querySelector('div[contenteditable="true"][role="textbox"]');
+    }
+    if (url.includes('mail.google.com')) {
+        return document.querySelector('.Am.Al.editable') || 
+               document.querySelector('div[contenteditable="true"][aria-label="Message Body"]');
+    }
+    if (url.includes('slack.com')) {
+        return document.querySelector('.ql-editor') || 
+               document.querySelector('div[contenteditable="true"][role="textbox"]');
+    }
+    if (url.includes('chat.google.com')) {
+        return document.querySelector('div[contenteditable="true"][role="textbox"]') || 
+               document.querySelector('[data-testid="chat-input"]');
+    }
+    return document.querySelector('div[contenteditable="true"]') || document.querySelector('textarea');
+}
+
 // Content Script for Inserting Text
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "INSERT_TEXT") {
+        const url = window.location.href;
         const activeElement = document.activeElement;
+        let composeBox = null;
 
-        if (activeElement) {
-            const isContentEditable = activeElement.contentEditable === 'true' || activeElement.role === 'textbox';
+        if (activeElement && (activeElement.contentEditable === 'true' || activeElement.role === 'textbox' || activeElement.tagName === 'TEXTAREA' || (activeElement.tagName === 'INPUT' && activeElement.type === 'text'))) {
+            composeBox = activeElement;
+        } else {
+            composeBox = findComposeBox(url);
+        }
+
+        if (composeBox) {
+            composeBox.focus();
+            const isContentEditable = composeBox.contentEditable === 'true' || composeBox.role === 'textbox';
 
             if (isContentEditable) {
-                // Focus and execute insertText
-                activeElement.focus();
                 const selection = window.getSelection();
-                if (!selection.rangeCount) return;
+                let range = document.createRange();
+                range.selectNodeContents(composeBox);
+                range.collapse(false); // place cursor at the end
+                selection.removeAllRanges();
+                selection.addRange(range);
 
-                // For modern reactive editors, we need to be careful
                 document.execCommand('insertText', false, request.text);
 
                 // Fallback / Trigger events
-                activeElement.dispatchEvent(new Event('input', { bubbles: true }));
-                activeElement.dispatchEvent(new Event('change', { bubbles: true }));
-            } else if (activeElement.tagName === 'TEXTAREA' || (activeElement.tagName === 'INPUT' && activeElement.type === 'text')) {
-                const start = activeElement.selectionStart;
-                const end = activeElement.selectionEnd;
-                const text = activeElement.value;
-                activeElement.value = text.slice(0, start) + request.text + text.slice(end);
-                activeElement.selectionStart = activeElement.selectionEnd = start + request.text.length;
-                activeElement.dispatchEvent(new Event('input', { bubbles: true }));
-                activeElement.dispatchEvent(new Event('change', { bubbles: true }));
+                composeBox.dispatchEvent(new Event('input', { bubbles: true }));
+                composeBox.dispatchEvent(new Event('change', { bubbles: true }));
+            } else {
+                const start = composeBox.selectionStart || 0;
+                const end = composeBox.selectionEnd || 0;
+                const text = composeBox.value || '';
+                composeBox.value = text.slice(0, start) + request.text + text.slice(end);
+                composeBox.selectionStart = composeBox.selectionEnd = start + request.text.length;
+                composeBox.dispatchEvent(new Event('input', { bubbles: true }));
+                composeBox.dispatchEvent(new Event('change', { bubbles: true }));
             }
             sendResponse({ status: "success" });
         } else {
@@ -122,25 +158,42 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         sender: isMe ? 'Me' : 'Them'
                     };
                 });
-            } else if (url.includes('web.whatsapp.com')) {
-                // Improved WhatsApp Selectors
-                const waMessages = document.querySelectorAll('.message-in, .message-out');
-                // Title is tricky in WA, it's often in the header
+            } else if (url.includes('whatsapp.com')) {
+                // Highly robust WhatsApp Selectors
+                const waMessages = document.querySelectorAll('.message-in, .message-out, div[class*="message-in"], div[class*="message-out"], [data-testid="msg-container"]');
                 const titleEl = document.querySelector('#main header span[dir="auto"], #main header ._amig, header canvas + div span');
                 if (titleEl) chatTitle = titleEl.innerText.trim() || titleEl.getAttribute('title');
 
                 messages = Array.from(waMessages).map(m => {
+                    // Detect sender using class name or data-id attribute (e.g. true_1234@c.us is sent by Me)
                     const isMe = m.classList.contains('message-out') ||
+                        m.className.includes('message-out') ||
+                        m.getAttribute('data-id')?.startsWith('true') ||
+                        m.closest('[data-id]')?.getAttribute('data-id')?.startsWith('true') ||
                         m.querySelector('[data-icon="msg-dblcheck"]') ||
                         m.querySelector('[data-icon="msg-check"]') ||
-                        m.querySelector('[data-icon="msg-dblcheck-ack"]');
+                        m.querySelector('[data-icon="msg-dblcheck-ack"]') ||
+                        false;
 
                     const textEl = m.querySelector('.selectable-text.copyable-text span') ||
                         m.querySelector('.copyable-text span') ||
-                        m.querySelector('._ao3e');
+                        m.querySelector('._ao3e') ||
+                        m.querySelector('span.selectable-text') ||
+                        m.querySelector('[class*="selectable-text"]');
 
-                    let text = textEl ? textEl.innerText.trim() : m.innerText.trim();
-                    text = text.replace(/\d{1,2}:\d{2}\s?(AM|PM|am|pm)?$/g, '').trim();
+                    let text = "";
+                    if (textEl) {
+                        text = textEl.innerText.trim();
+                    } else {
+                        // Extract text by removing meta/time nodes in a clone to avoid timestamp inclusion
+                        const clone = m.cloneNode(true);
+                        const metaEls = clone.querySelectorAll('[class*="time"], [class*="status"], span[dir="ltr"], ._am3a, .copyable-text + div');
+                        metaEls.forEach(el => el.remove());
+                        text = clone.innerText.trim();
+                    }
+
+                    // Strip any remaining trailing timestamps
+                    text = text.replace(/\d{1,2}:\d{2}\s?(AM|PM|am|pm)?$/gi, '').trim();
 
                     return { text, sender: isMe ? 'Me' : 'Them' };
                 });
@@ -214,7 +267,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             if (url.includes('linkedin.com')) {
                 sendBtn = document.querySelector('.msg-form__send-button');
             } else if (url.includes('whatsapp.com')) {
-                sendBtn = document.querySelector('button span[data-icon="send"]')?.parentElement;
+                sendBtn = document.querySelector('button[data-testid="compose-btn-send"]') ||
+                          document.querySelector('[data-testid="send"]') ||
+                          document.querySelector('button span[data-icon="send"]')?.parentElement;
             } else if (url.includes('mail.google.com')) {
                 sendBtn = document.querySelector('.T-I.J-J5-Ji.aoO.v7.T-I-atl.L3');
                 // Could also be chat in mail

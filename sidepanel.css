@@ -1383,19 +1383,34 @@ textarea:focus {
 }
 
 .primary-btn-small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background: var(--primary);
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 6px 12px;
+  height: 32px;
   border-radius: 6px;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(255, 140, 0, 0.15);
 }
 
 .primary-btn-small:hover {
-  opacity: 0.9;
+  opacity: 0.95;
+  transform: translateY(-0.5px);
+  box-shadow: 0 2px 6px rgba(255, 140, 0, 0.25);
+}
+
+.primary-btn-small i,
+.primary-btn-small svg {
+  width: 14px !important;
+  height: 14px !important;
+  flex-shrink: 0;
 }
 
 .setting-tip {

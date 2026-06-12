@@ -1466,6 +1466,8 @@ If not, refine them before final output.`;
               if (resp && resp.status === 'success' && resp.chatTitle) {
                 if (smartChats[resp.chatTitle]) {
                   openChat(resp.chatTitle);
+                } else {
+                  startNewChat(resp.chatTitle);
                 }
               }
             });
