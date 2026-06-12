@@ -6,13 +6,20 @@
     "permissions": [
         "sidePanel",
         "contextMenus",
-        "storage"
+        "storage",
+        "tabs"
     ],
     "host_permissions": [
         "https://*.supabase.co/*",
         "https://*.razorpay.com/*",
         "https://*.lemonsqueezy.com/*",
-        "https://*.stripe.com/*"
+        "https://*.stripe.com/*",
+        "https://web.whatsapp.com/*",
+        "https://www.linkedin.com/*",
+        "https://mail.google.com/*",
+        "https://chat.google.com/*",
+        "https://app.slack.com/*",
+        "https://*.slack.com/*"
     ],
     "background": {
         "service_worker": "background.js"

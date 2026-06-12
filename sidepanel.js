@@ -17,6 +17,36 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Helper to query active tab across windows and fall back properly (resolving DevTools/sidebar focus issues)
+  const getActiveTab = async () => {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.tabs?.query) return null;
+      // Try current window first
+      let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.url) return tab;
+      // Fallback: try last focused window (needed if DevTools/sidepanel has focus)
+      const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      if (tabs && tabs.length > 0 && tabs[0].url) return tabs[0];
+      // Fallback: try any active tab across windows
+      const anyActiveTabs = await chrome.tabs.query({ active: true });
+      if (anyActiveTabs && anyActiveTabs.length > 0) {
+        const supportedTab = anyActiveTabs.find(t => t.url && (
+          t.url.includes('whatsapp.com') ||
+          t.url.includes('linkedin.com') ||
+          t.url.includes('mail.google.com') ||
+          t.url.includes('chat.google.com') ||
+          t.url.includes('slack.com')
+        ));
+        if (supportedTab) return supportedTab;
+        if (anyActiveTabs[0].url) return anyActiveTabs[0];
+      }
+      return tab || null;
+    } catch (e) {
+      console.warn('[RefineAI] getActiveTab failed:', e);
+      return null;
+    }
+  };
+
   // --- UI ELEMENTS ---
   const appContainer = document.querySelector('.app-container');
   const toastContainer = document.getElementById('toast-container');
@@ -531,7 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Attempt to scrape from page context via message passing
     try {
       if (typeof chrome !== 'undefined' && chrome.tabs) {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tab = await getActiveTab();
         if (tab && tab.url && (tab.url.includes('linkedin.com') || tab.url.includes('mail.google.com'))) {
           chrome.tabs.sendMessage(tab.id, { action: 'SCRAPE_RECIPIENT' }, (response) => {
             if (chrome.runtime.lastError) {
@@ -1160,7 +1190,7 @@ If not, refine it before final output.`;
       return;
     }
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tab = await getActiveTab();
     if (!tab) return;
 
     chrome.tabs.sendMessage(tab.id, { action: "SCRAPE_MESSAGES" }, (response) => {
@@ -1215,7 +1245,7 @@ If not, refine it before final output.`;
     // Detect platform for reply style
     let platformStyle = '';
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tab = await getActiveTab();
       if (tab && tab.url) {
         for (const [, platform] of Object.entries(CFG.PLATFORMS)) {
           if (tab.url.includes(platform.match)) {
@@ -1341,7 +1371,7 @@ If not, refine them before final output.`;
         return;
       }
       console.log(`[RefineAI sidepanel.js] refreshActiveChat() invoked. isAutomated: ${isAutomated}`);
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tab = await getActiveTab();
       if (!tab || !tab.url) {
         console.log('[RefineAI sidepanel.js] No active tab or tab URL found.');
         return;
@@ -1450,7 +1480,7 @@ If not, refine them before final output.`;
       if (inserted) {
         // Then attempt to send
         if (typeof chrome !== 'undefined' && chrome.tabs?.query) {
-          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          const tab = await getActiveTab();
           if (tab) {
             setTimeout(() => {
               chrome.tabs.sendMessage(tab.id, { action: "SEND_MESSAGE" }, (sendResp) => {
