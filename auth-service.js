@@ -15,9 +15,15 @@ let currentUser = null;
 let userProfile = null;
 
 async function initAuth() {
-    const loginBtn = document.getElementById('google-login-btn');
-    if (loginBtn) {
-        loginBtn.addEventListener('click', handleLogin);
+    // Setup email login form submit
+    const loginForm = document.getElementById('email-login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleEmailLogin);
+    }
+
+    const signupBtn = document.getElementById('signup-btn');
+    if (signupBtn) {
+        signupBtn.addEventListener('click', handleEmailSignup);
     }
 
     // Setup logout button
@@ -84,12 +90,6 @@ async function initAuth() {
 }
 
 async function handleUserAuth(user) {
-    // Reset login button loading state on success
-    const loginBtn = document.getElementById('google-login-btn');
-    if (loginBtn) {
-        loginBtn.classList.remove('loading');
-    }
-
     currentUser = user;
     await fetchAndSyncProfile();
     updateUserProfileUI(user);
@@ -231,11 +231,7 @@ function showAuthUI(show) {
         mainContent.style.display = 'none';
 
 
-        // Reset login button loading state
-        const loginBtn = document.getElementById('google-login-btn');
-        if (loginBtn) {
-            loginBtn.classList.remove('loading');
-        }
+
 
         // Initialize icons in auth view
         if (window.lucide) {
@@ -262,148 +258,104 @@ function showAuthUI(show) {
     }
 }
 
-async function handleLogin() {
-    // Show loading state on button
-    const loginBtn = document.getElementById('google-login-btn');
-    if (loginBtn) {
-        loginBtn.classList.add('loading');
+async function handleEmailLogin(e) {
+    if (e) e.preventDefault();
+
+    const emailInput = document.getElementById('login-email');
+    const passwordInput = document.getElementById('login-password');
+    const signinBtn = document.getElementById('signin-btn');
+
+    if (!emailInput || !passwordInput) return;
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+        if (window.showToast) window.showToast('Please fill in all fields.', 'error');
+        return;
     }
 
-    // Helper to hide loading
-    const hideLoading = () => {
-        if (loginBtn) {
-            loginBtn.classList.remove('loading');
-        }
-    };
+    // Show loading
+    if (signinBtn) {
+        signinBtn.disabled = true;
+        signinBtn.querySelector('span').textContent = 'Signing In...';
+    }
 
-    // Get the extension's redirect URL
-    const extensionRedirectUrl = chrome.identity.getRedirectURL();
     try {
-        // 1. Get the Supabase Auth URL
-        const { data, error } = await window.supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                // This is a special URL Chrome provides for extensions
-                redirectTo: extensionRedirectUrl,
-                skipBrowserRedirect: true,
-            }
+        const { data, error } = await window.supabase.auth.signInWithPassword({
+            email: email,
+            password: password
         });
 
         if (error) {
-            console.error('[RefineAI] OAuth initiation error:', error);
-            if (window.showToast) window.showToast(`Login error: ${error.message}`, 'error');
-            hideLoading();
-            return;
+            console.error('[RefineAI] Login error:', error);
+            if (window.showToast) window.showToast(`Login failed: ${error.message}`, 'error');
+        } else {
+            if (window.showToast) window.showToast('Signed in successfully!', 'success');
         }
-
-        if (!data || !data.url) {
-            console.error('[RefineAI] No auth URL returned from Supabase');
-            if (window.showToast) window.showToast('Failed to get login URL. Check Supabase configuration.', 'error');
-            hideLoading();
-            return;
-        }
-
-        // 2. Launch the secure Web Auth Flow
-        chrome.identity.launchWebAuthFlow({
-            url: data.url,
-            interactive: true
-        }, async (redirectUrl) => {
-            // Handle errors from launchWebAuthFlow
-            if (chrome.runtime.lastError) {
-                const errorMsg = chrome.runtime.lastError.message;
-                console.error('[RefineAI] Auth flow error:', errorMsg);
-
-                // Provide more helpful error messages
-                if (errorMsg.includes('canceled') || errorMsg.includes('cancelled')) {
-                    if (window.showToast) window.showToast('Login cancelled by user.', 'warning');
-                } else if (errorMsg.includes('redirect_uri_mismatch')) {
-                    console.error('[RefineAI] REDIRECT URI MISMATCH! Add this URL to Google Cloud Console:', extensionRedirectUrl);
-                    if (window.showToast) window.showToast('Redirect URI mismatch. Check console for details.', 'error');
-                } else {
-                    if (window.showToast) window.showToast(`Auth failed: ${errorMsg}`, 'error');
-                }
-                hideLoading();
-                return;
-            }
-
-            if (!redirectUrl) {
-                console.error('[RefineAI] No redirect URL received');
-                if (window.showToast) window.showToast('Login failed: No response from auth server.', 'error');
-                hideLoading();
-                return;
-            }
-            // 3. Extract tokens from the redirect URL
-            // Tokens can be in hash (#) or query (?) parameters
-            let accessToken = null;
-            let refreshToken = null;
-
-            try {
-                // Try hash fragment first (implicit grant flow)
-                if (redirectUrl.includes('#')) {
-                    const hashParams = new URLSearchParams(redirectUrl.split('#')[1]);
-                    accessToken = hashParams.get('access_token');
-                    refreshToken = hashParams.get('refresh_token');
-                }
-
-                // If not in hash, try query parameters (PKCE flow)
-                if (!accessToken) {
-                    const url = new URL(redirectUrl);
-                    accessToken = url.searchParams.get('access_token');
-                    refreshToken = url.searchParams.get('refresh_token');
-
-                    // Check for authorization code (PKCE)
-                    const code = url.searchParams.get('code');
-                    if (code && !accessToken) {
-                        const { data: sessionData, error: exchangeError } = await window.supabase.auth.exchangeCodeForSession(code);
-
-                        if (exchangeError) {
-                            console.error('[RefineAI] Code exchange error:', exchangeError);
-                            if (window.showToast) window.showToast('Failed to exchange code for session.', 'error');
-                            return;
-                        }
-
-                        if (sessionData && sessionData.session) {
-                            return; // Session is already set by exchangeCodeForSession
-                        }
-                    }
-                }
-
-                // Check for error in URL
-                const errorDescription = new URLSearchParams(redirectUrl.includes('#') ? redirectUrl.split('#')[1] : new URL(redirectUrl).search).get('error_description');
-                if (errorDescription) {
-                    console.error('[RefineAI] OAuth error:', errorDescription);
-                    if (window.showToast) window.showToast(`OAuth error: ${errorDescription}`, 'error');
-                    hideLoading();
-                    return;
-                }
-
-            } catch (parseError) {
-                console.error('[RefineAI] Error parsing redirect URL:', parseError);
-            }
-
-            if (accessToken && refreshToken) {
-                const { error: sessionError } = await window.supabase.auth.setSession({
-                    access_token: accessToken,
-                    refresh_token: refreshToken
-                });
-
-                if (sessionError) {
-                    console.error('[RefineAI] Session error:', sessionError);
-                    if (window.showToast) window.showToast(`Session error: ${sessionError.message}`, 'error');
-                    hideLoading();
-                } else {
-                    // Auth state change will handle the rest
-                }
-            } else {
-                console.error('[RefineAI] No tokens found in redirect URL');
-                if (window.showToast) window.showToast('Login failed: No tokens received.', 'error');
-                hideLoading();
-            }
-        });
     } catch (err) {
         console.error('[RefineAI] Unexpected login error:', err);
-        if (window.showToast) window.showToast('Login failed unexpectedly. Check console.', 'error');
-        hideLoading();
+        if (window.showToast) window.showToast('Login failed unexpectedly.', 'error');
+    } finally {
+        if (signinBtn) {
+            signinBtn.disabled = false;
+            signinBtn.querySelector('span').textContent = 'Sign In';
+        }
+    }
+}
+
+async function handleEmailSignup(e) {
+    if (e) e.preventDefault();
+
+    const emailInput = document.getElementById('login-email');
+    const passwordInput = document.getElementById('login-password');
+    const signupBtn = document.getElementById('signup-btn');
+
+    if (!emailInput || !passwordInput) return;
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+        if (window.showToast) window.showToast('Please fill in all fields.', 'error');
+        return;
+    }
+
+    if (password.length < 6) {
+        if (window.showToast) window.showToast('Password must be at least 6 characters.', 'error');
+        return;
+    }
+
+    // Show loading
+    if (signupBtn) {
+        signupBtn.disabled = true;
+        signupBtn.querySelector('span').textContent = 'Signing Up...';
+    }
+
+    try {
+        const { data, error } = await window.supabase.auth.signUp({
+            email: email,
+            password: password
+        });
+
+        if (error) {
+            console.error('[RefineAI] Signup error:', error);
+            if (window.showToast) window.showToast(`Signup failed: ${error.message}`, 'error');
+        } else {
+            if (data?.user && data.session) {
+                if (window.showToast) window.showToast('Sign up successful and logged in!', 'success');
+            } else {
+                if (window.showToast) window.showToast('Sign up successful! Please check your email.', 'info');
+            }
+        }
+    } catch (err) {
+        console.error('[RefineAI] Unexpected signup error:', err);
+        if (window.showToast) window.showToast('Signup failed unexpectedly.', 'error');
+    } finally {
+        if (signupBtn) {
+            signupBtn.disabled = false;
+            signupBtn.querySelector('span').textContent = 'Sign Up';
+        }
     }
 }
 

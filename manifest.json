@@ -6,17 +6,8 @@
     "permissions": [
         "sidePanel",
         "contextMenus",
-        "storage",
-        "identity"
+        "storage"
     ],
-    "oauth2": {
-        "client_id": "838871652854-4s3b564134d0r30bif7lqevmq6i2kk5m.apps.googleusercontent.com",
-        "scopes": [
-            "openid",
-            "email",
-            "profile"
-        ]
-    },
     "host_permissions": [
         "https://*.supabase.co/*",
         "https://*.razorpay.com/*",
