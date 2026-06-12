@@ -19,19 +19,7 @@
   <!-- Local copies to comply with Chrome Extension Security Policy (CSP) -->
   <script src="lib/lucide.min.js"></script>
   <script src="lib/supabase.js"></script>
-  <script>
-    // Theme initialization to prevent flash
-    (function () {
-      const savedTheme = localStorage.getItem('theme');
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const isDark = savedTheme === 'dark' || (!savedTheme && systemPrefersDark);
-      if (isDark) {
-        document.documentElement.classList.add('dark-theme');
-      } else {
-        document.documentElement.classList.add('light-theme');
-      }
-    })();
-  </script>
+  <script src="theme-init.js"></script>
 </head>
 
 <body>
@@ -109,27 +97,11 @@
           <div class="auth-logo-text">RefineAI</div>
         </div>
 
-        <h1>Elevate Your Writing</h1>
-        <p class="auth-subtitle">Transform your words with the power of AI</p>
-
-        <!-- Features List -->
-        <div class="auth-features">
-          <div class="auth-feature">
-            <i data-lucide="zap" class="feature-icon"></i>
-            <span>Instant rewrites & grammar fixes</span>
-          </div>
-          <div class="auth-feature">
-            <i data-lucide="sparkles" class="feature-icon"></i>
-            <span>Multiple tones & styles</span>
-          </div>
-          <div class="auth-feature">
-            <i data-lucide="cloud" class="feature-icon"></i>
-            <span>Sync across all devices</span>
-          </div>
-        </div>
+        <h1 id="auth-title">Welcome Back</h1>
+        <p id="auth-subtitle" class="auth-subtitle">Sign in to continue to RefineAI</p>
 
         <!-- Email & Password Form -->
-        <form id="email-login-form" class="email-login-form">
+        <form id="auth-form" class="email-login-form" data-mode="login">
           <div class="input-group">
             <i data-lucide="mail" class="input-icon"></i>
             <input type="email" id="login-email" placeholder="Email Address" required>
@@ -138,13 +110,12 @@
             <i data-lucide="lock" class="input-icon"></i>
             <input type="password" id="login-password" placeholder="Password (min. 6 chars)" required>
           </div>
-          <div class="auth-buttons-row">
-            <button type="submit" id="signin-btn" class="auth-submit-btn primary-btn-large">
-              <span>Sign In</span>
-            </button>
-            <button type="button" id="signup-btn" class="auth-submit-btn secondary-btn-large">
-              <span>Sign Up</span>
-            </button>
+          <button type="submit" id="auth-submit-btn" class="auth-submit-btn primary-btn-large">
+            <span>Sign In</span>
+          </button>
+          <div class="auth-toggle-row">
+            <span id="auth-toggle-text">Don't have an account?</span>
+            <button type="button" id="auth-toggle-btn" class="auth-toggle-btn">Sign Up</button>
           </div>
         </form>
 

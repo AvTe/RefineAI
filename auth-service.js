@@ -15,15 +15,15 @@ let currentUser = null;
 let userProfile = null;
 
 async function initAuth() {
-    // Setup email login form submit
-    const loginForm = document.getElementById('email-login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleEmailLogin);
+    // Setup email login/signup form submit
+    const authForm = document.getElementById('auth-form');
+    if (authForm) {
+        authForm.addEventListener('submit', handleAuthSubmit);
     }
 
-    const signupBtn = document.getElementById('signup-btn');
-    if (signupBtn) {
-        signupBtn.addEventListener('click', handleEmailSignup);
+    const toggleBtn = document.getElementById('auth-toggle-btn');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', toggleAuthMode);
     }
 
     // Setup logout button
@@ -258,12 +258,52 @@ function showAuthUI(show) {
     }
 }
 
-async function handleEmailLogin(e) {
+function toggleAuthMode() {
+    const authForm = document.getElementById('auth-form');
+    const submitBtn = document.getElementById('auth-submit-btn');
+    const toggleText = document.getElementById('auth-toggle-text');
+    const toggleBtn = document.getElementById('auth-toggle-btn');
+    const authTitle = document.getElementById('auth-title');
+    const authSubtitle = document.getElementById('auth-subtitle');
+
+    if (!authForm || !submitBtn || !toggleText || !toggleBtn) return;
+
+    const currentMode = authForm.getAttribute('data-mode') || 'login';
+    if (currentMode === 'login') {
+        authForm.setAttribute('data-mode', 'signup');
+        if (authTitle) authTitle.textContent = 'Create Account';
+        if (authSubtitle) authSubtitle.textContent = 'Sign up to start refining your writing';
+        submitBtn.querySelector('span').textContent = 'Create Account';
+        toggleText.textContent = 'Already have an account?';
+        toggleBtn.textContent = 'Sign In';
+    } else {
+        authForm.setAttribute('data-mode', 'login');
+        if (authTitle) authTitle.textContent = 'Welcome Back';
+        if (authSubtitle) authSubtitle.textContent = 'Sign in to continue to RefineAI';
+        submitBtn.querySelector('span').textContent = 'Sign In';
+        toggleText.textContent = "Don't have an account?";
+        toggleBtn.textContent = 'Sign Up';
+    }
+}
+
+async function handleAuthSubmit(e) {
     if (e) e.preventDefault();
 
+    const authForm = document.getElementById('auth-form');
+    if (!authForm) return;
+
+    const mode = authForm.getAttribute('data-mode') || 'login';
+    if (mode === 'login') {
+        await handleEmailLogin();
+    } else {
+        await handleEmailSignup();
+    }
+}
+
+async function handleEmailLogin() {
     const emailInput = document.getElementById('login-email');
     const passwordInput = document.getElementById('login-password');
-    const signinBtn = document.getElementById('signin-btn');
+    const submitBtn = document.getElementById('auth-submit-btn');
 
     if (!emailInput || !passwordInput) return;
 
@@ -276,9 +316,9 @@ async function handleEmailLogin(e) {
     }
 
     // Show loading
-    if (signinBtn) {
-        signinBtn.disabled = true;
-        signinBtn.querySelector('span').textContent = 'Signing In...';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.querySelector('span').textContent = 'Signing In...';
     }
 
     try {
@@ -289,7 +329,13 @@ async function handleEmailLogin(e) {
 
         if (error) {
             console.error('[RefineAI] Login error:', error);
-            if (window.showToast) window.showToast(`Login failed: ${error.message}`, 'error');
+            if (window.showToast) {
+                if (error.message.toLowerCase().includes('email not confirmed') || error.message.toLowerCase().includes('confirm')) {
+                    window.showToast('Please check your inbox to confirm your email address.', 'warning');
+                } else {
+                    window.showToast(`Login failed: ${error.message}`, 'error');
+                }
+            }
         } else {
             if (window.showToast) window.showToast('Signed in successfully!', 'success');
         }
@@ -297,19 +343,17 @@ async function handleEmailLogin(e) {
         console.error('[RefineAI] Unexpected login error:', err);
         if (window.showToast) window.showToast('Login failed unexpectedly.', 'error');
     } finally {
-        if (signinBtn) {
-            signinBtn.disabled = false;
-            signinBtn.querySelector('span').textContent = 'Sign In';
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.querySelector('span').textContent = 'Sign In';
         }
     }
 }
 
-async function handleEmailSignup(e) {
-    if (e) e.preventDefault();
-
+async function handleEmailSignup() {
     const emailInput = document.getElementById('login-email');
     const passwordInput = document.getElementById('login-password');
-    const signupBtn = document.getElementById('signup-btn');
+    const submitBtn = document.getElementById('auth-submit-btn');
 
     if (!emailInput || !passwordInput) return;
 
@@ -327,9 +371,9 @@ async function handleEmailSignup(e) {
     }
 
     // Show loading
-    if (signupBtn) {
-        signupBtn.disabled = true;
-        signupBtn.querySelector('span').textContent = 'Signing Up...';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.querySelector('span').textContent = 'Creating Account...';
     }
 
     try {
@@ -345,16 +389,16 @@ async function handleEmailSignup(e) {
             if (data?.user && data.session) {
                 if (window.showToast) window.showToast('Sign up successful and logged in!', 'success');
             } else {
-                if (window.showToast) window.showToast('Sign up successful! Please check your email.', 'info');
+                if (window.showToast) window.showToast('Signup successful! Check email or try logging in.', 'info');
             }
         }
     } catch (err) {
         console.error('[RefineAI] Unexpected signup error:', err);
         if (window.showToast) window.showToast('Signup failed unexpectedly.', 'error');
     } finally {
-        if (signupBtn) {
-            signupBtn.disabled = false;
-            signupBtn.querySelector('span').textContent = 'Sign Up';
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.querySelector('span').textContent = 'Create Account';
         }
     }
 }
