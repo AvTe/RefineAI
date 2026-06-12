@@ -2986,3 +2986,8 @@ input:checked+.slider:before {
   box-shadow: none !important;
 }
 
+#main-reply-btn:hover {
+  color: #25D366 !important;
+}
+
+
