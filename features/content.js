@@ -164,12 +164,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 const titleEl = document.querySelector('#main header span[dir="auto"], #main header ._amig, header canvas + div span');
                 if (titleEl) chatTitle = titleEl.innerText.trim() || titleEl.getAttribute('title');
 
-                messages = Array.from(waMessages).map(m => {
+                const seenIds = new Set();
+                const processedMessages = [];
+
+                for (const m of Array.from(waMessages)) {
+                    const msgId = m.getAttribute('data-id') || m.closest('[data-id]')?.getAttribute('data-id');
+                    if (msgId) {
+                        if (seenIds.has(msgId)) continue;
+                        seenIds.add(msgId);
+                    }
+
                     // Detect sender using class name or data-id attribute (e.g. true_1234@c.us is sent by Me)
                     const isMe = m.classList.contains('message-out') ||
                         m.className.includes('message-out') ||
-                        m.getAttribute('data-id')?.startsWith('true') ||
-                        m.closest('[data-id]')?.getAttribute('data-id')?.startsWith('true') ||
+                        msgId?.startsWith('true') ||
                         m.querySelector('[data-icon="msg-dblcheck"]') ||
                         m.querySelector('[data-icon="msg-check"]') ||
                         m.querySelector('[data-icon="msg-dblcheck-ack"]') ||
@@ -187,7 +195,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     } else {
                         // Extract text by removing meta/time nodes in a clone to avoid timestamp inclusion
                         const clone = m.cloneNode(true);
-                        const metaEls = clone.querySelectorAll('[class*="time"], [class*="status"], span[dir="ltr"], ._am3a, .copyable-text + div');
+                        const metaEls = clone.querySelectorAll('[class*="time"], [class*="status"], ._am3a, .copyable-text + div, span[data-icon], svg');
                         metaEls.forEach(el => el.remove());
                         text = clone.innerText.trim();
                     }
@@ -195,8 +203,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     // Strip any remaining trailing timestamps
                     text = text.replace(/\d{1,2}:\d{2}\s?(AM|PM|am|pm)?$/gi, '').trim();
 
-                    return { text, sender: isMe ? 'Me' : 'Them' };
-                });
+                    if (text) {
+                        processedMessages.push({ text, sender: isMe ? 'Me' : 'Them' });
+                    }
+                }
+                messages = processedMessages;
             }
             else if (url.includes('mail.google.com')) {
                 const gmailMessages = document.querySelectorAll('.adn.ads, div[role="listitem"]');

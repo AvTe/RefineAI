@@ -450,6 +450,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (viewName === 'history') loadHistory();
+    if (viewName === 'smart') {
+      renderChatList();
+      refreshActiveChat(true);
+    }
     if (viewName === 'upgrade' && window.authService && window.authService.updateUpgradeView) {
       window.authService.updateUpgradeView();
     }
@@ -1158,7 +1162,29 @@ If not, refine it before final output.`;
     renderChatList();
   };
 
-  const startNewChat = async (knownTitle = null) => {
+  const startNewChat = async (knownTitle = null, preScrapedMessages = null) => {
+    if (preScrapedMessages) {
+      const id = knownTitle || 'Chat_' + Date.now();
+      smartChats[id] = {
+        title: knownTitle || "Unknown Chat",
+        messages: preScrapedMessages,
+        timestamp: Date.now()
+      };
+      saveSmartChats();
+      openChat(id);
+
+      const lastMsg = preScrapedMessages[preScrapedMessages.length - 1];
+      if (autoReplyToggle.checked && lastMsg && lastMsg.sender === 'Them') {
+        getSmartSuggestions(preScrapedMessages, knownTitle);
+      }
+      return;
+    }
+
+    if (typeof chrome === 'undefined' || !chrome.tabs?.query) {
+      console.log('[RefineAI] chrome.tabs.query is unavailable (mock/web environment).');
+      return;
+    }
+
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab) return;
 
@@ -1319,84 +1345,85 @@ If not, refine them before final output.`;
   };
 
   // --- LIVE DETECTION LISTENER ---
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "NEW_MESSAGE_DETECTED") {
-      // Refresh if in smart view
-      if (currentChatId && views.smart.style.display !== 'none') {
-        refreshActiveChat(true);
-      }
-    }
-  });
-
-  const refreshActiveChat = async (isAutomated = false) => {
-    // If context is completely missing, try to start a new chat from current tab logic
-    if (!currentChatId) {
-      if (!isAutomated) startNewChat();
-      return;
-    }
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab) return;
-
-    chrome.tabs.sendMessage(tab.id, { action: "SCRAPE_MESSAGES" }, (response) => {
-      if (response && response.status === 'success') {
-        let chatTitle = response.chatTitle || "Unknown Chat";
-
-        // --- 1. HANDLE "UNKNOWN CHAT" RESOLUTION ---
-        if (currentChatId === "Unknown Chat" && chatTitle !== "Unknown Chat") {
-          // We found a real name for an unknown chat
-          if (smartChats[chatTitle]) {
-            // If a chat with this name already exists, switch to it and discard the temp one
-            delete smartChats[currentChatId];
-            currentChatId = chatTitle;
-          } else {
-            // Rename the current chat object
-            smartChats[chatTitle] = smartChats[currentChatId];
-            smartChats[chatTitle].title = chatTitle; // Ensure title is correct
-            delete smartChats[currentChatId];
-            currentChatId = chatTitle;
-          }
-          saveSmartChats();
-          renderChatList();
-          // Update UI title immediately
-          document.getElementById('active-chat-title').textContent = chatTitle;
-        }
-
-        // --- 2. HANDLE CONTEXT SWITCHING ---
-        else if (currentChatId !== chatTitle && chatTitle !== "Unknown Chat") {
-          // User switched tabs/chats in the web app
-          if (smartChats[chatTitle]) {
-            // Switch to existing chat
-            currentChatId = chatTitle;
-            // We need to re-render the view for the new chat
-            openChat(currentChatId);
-            return; // openChat handles the rest
-          } else {
-            // New chat detected, start it
-            startNewChat(chatTitle);
-            return;
-          }
-        }
-
-        if (!smartChats[currentChatId]) return;
-
-        // --- 3. UPDATE MESSAGES ---
-        const currentMsgs = JSON.stringify(smartChats[currentChatId].messages);
-        const newMsgs = JSON.stringify(response.messages);
-
-        if (currentMsgs !== newMsgs) {
-          smartChats[currentChatId].messages = response.messages;
-          smartChats[currentChatId].timestamp = Date.now();
-          saveSmartChats();
-
-          updateChatHistory(response.messages);
-
-          const lastMsg = response.messages[response.messages.length - 1];
-          if (autoReplyToggle.checked && lastMsg && lastMsg.sender === 'Them') {
-            getSmartSuggestions(response.messages, response.chatTitle, isAutomated);
-          }
+  if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.action === "NEW_MESSAGE_DETECTED") {
+        // Refresh if in smart view
+        if (views.smart.classList.contains('active')) {
+          refreshActiveChat(true);
         }
       }
     });
+  }
+
+  const refreshActiveChat = async (isAutomated = false) => {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.tabs?.query) {
+        return;
+      }
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab || !tab.url) return;
+
+      const isSupported = tab.url.includes('whatsapp.com') || tab.url.includes('linkedin.com') || tab.url.includes('chat.google.com') || tab.url.includes('slack.com');
+      if (!isSupported) return;
+
+      chrome.tabs.sendMessage(tab.id, { action: "SCRAPE_MESSAGES" }, (response) => {
+        if (chrome.runtime.lastError) return;
+        if (response && response.status === 'success') {
+          let chatTitle = response.chatTitle || "Unknown Chat";
+
+          // --- 1. HANDLE "UNKNOWN CHAT" RESOLUTION ---
+          if (currentChatId === "Unknown Chat" && chatTitle !== "Unknown Chat") {
+            if (smartChats[chatTitle]) {
+              delete smartChats[currentChatId];
+              currentChatId = chatTitle;
+            } else {
+              smartChats[chatTitle] = smartChats[currentChatId];
+              smartChats[chatTitle].title = chatTitle;
+              delete smartChats[currentChatId];
+              currentChatId = chatTitle;
+            }
+            saveSmartChats();
+            renderChatList();
+            document.getElementById('active-chat-title').textContent = chatTitle;
+          }
+
+          // --- 2. HANDLE CONTEXT SWITCHING / ZERO-CLICK OPEN ---
+          if (!currentChatId || (currentChatId !== chatTitle && chatTitle !== "Unknown Chat")) {
+            if (chatTitle !== "Unknown Chat" || !isAutomated) {
+              if (smartChats[chatTitle]) {
+                currentChatId = chatTitle;
+                openChat(currentChatId);
+              } else {
+                startNewChat(chatTitle, response.messages);
+              }
+            }
+            return;
+          }
+
+          if (!smartChats[currentChatId]) return;
+
+          // --- 3. UPDATE MESSAGES ---
+          const currentMsgs = JSON.stringify(smartChats[currentChatId].messages);
+          const newMsgs = JSON.stringify(response.messages);
+
+          if (currentMsgs !== newMsgs) {
+            smartChats[currentChatId].messages = response.messages;
+            smartChats[currentChatId].timestamp = Date.now();
+            saveSmartChats();
+
+            updateChatHistory(response.messages);
+
+            const lastMsg = response.messages[response.messages.length - 1];
+            if (autoReplyToggle.checked && lastMsg && lastMsg.sender === 'Them') {
+              getSmartSuggestions(response.messages, response.chatTitle, isAutomated);
+            }
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('[RefineAI] refreshActiveChat failed:', e);
+    }
   };
 
   document.getElementById('new-chat-btn').addEventListener('click', () => startNewChat());
@@ -1420,18 +1447,25 @@ If not, refine them before final output.`;
       const inserted = await window.insertTextIntoPage(smartReplyText.value);
       if (inserted) {
         // Then attempt to send
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab) {
-          setTimeout(() => {
-            chrome.tabs.sendMessage(tab.id, { action: "SEND_MESSAGE" }, (sendResp) => {
-              if (sendResp && sendResp.status === "success") {
-                showToast('Replied successfully!', 'success');
-                smartOutputSection.style.display = 'none';
-                smartReplyText.value = '';
-                refreshActiveChat();
-              }
-            });
-          }, 100);
+        if (typeof chrome !== 'undefined' && chrome.tabs?.query) {
+          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          if (tab) {
+            setTimeout(() => {
+              chrome.tabs.sendMessage(tab.id, { action: "SEND_MESSAGE" }, (sendResp) => {
+                if (sendResp && sendResp.status === "success") {
+                  showToast('Replied successfully!', 'success');
+                  smartOutputSection.style.display = 'none';
+                  smartReplyText.value = '';
+                  refreshActiveChat();
+                }
+              });
+            }, 100);
+          }
+        } else {
+          // In mock/web environment
+          showToast('Replied successfully (mock)!', 'success');
+          smartOutputSection.style.display = 'none';
+          smartReplyText.value = '';
         }
       }
     }
@@ -1448,36 +1482,7 @@ If not, refine them before final output.`;
   // Initial render
   renderChatList();
 
-  // Smart Reply auto-sync is handled by mainReplyBtn above (switchView('smart'))
-  // Auto-Sync when entering smart view
-  if (mainReplyBtn) {
-    const originalHandler = mainReplyBtn.onclick;
-    mainReplyBtn.addEventListener('click', async () => {
-      renderChatList();
-      // Auto-Sync: Attempt to connect to current tab's active chat automatically
-      try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab && tab.url && (tab.url.includes('whatsapp.com') || tab.url.includes('linkedin.com') || tab.url.includes('chat.google.com') || tab.url.includes('slack.com'))) {
-          if (currentChatId) {
-            refreshActiveChat();
-          } else {
-            chrome.tabs.sendMessage(tab.id, { action: "SCRAPE_MESSAGES" }, (resp) => {
-              if (chrome.runtime.lastError) return;
-              if (resp && resp.status === 'success' && resp.chatTitle) {
-                if (smartChats[resp.chatTitle]) {
-                  openChat(resp.chatTitle);
-                } else {
-                  startNewChat(resp.chatTitle);
-                }
-              }
-            });
-          }
-        }
-      } catch (e) {
-        console.warn('[RefineAI] Auto-sync failed:', e);
-      }
-    });
-  }
+  // Smart Reply auto-sync is handled inside switchView('smart')
 
   // --- ONBOARDING WIZARD ---
   (async function initOnboarding() {
