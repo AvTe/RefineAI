@@ -114,6 +114,7 @@ serve(async (req) => {
         // 3. Try OpenRouter (Last resort)
         if (OPENROUTER_KEY) {
             try {
+                const openRouterModel = Deno.env.get('OPENROUTER_MODEL') || "meta-llama/llama-3.3-70b-instruct";
                 response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                     method: "POST",
                     headers: {
@@ -121,7 +122,7 @@ serve(async (req) => {
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        model: "meta-llama/llama-3.3-70b-instruct",
+                        model: openRouterModel,
                         messages: messages
                     })
                 });
