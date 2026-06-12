@@ -1109,50 +1109,25 @@ If not, refine it before final output.`;
   };
 
   const openChat = (id) => {
-    const isDifferentChat = currentChatId !== id;
     currentChatId = id;
     const chat = smartChats[id];
     document.getElementById('active-chat-title').textContent = chat.title;
     document.getElementById('smart-chat-list-view').style.display = 'none';
     document.getElementById('smart-active-chat-view').style.display = 'block';
 
-    const chatHistoryContainer = document.getElementById('chat-history');
-
-    // Only full re-render if it's a different chat or empty
-    if (isDifferentChat || chatHistoryContainer.innerHTML.trim() === '') {
-      chatHistoryContainer.innerHTML = chat.messages.map(msg => `
-        <div class="message-bubble ${msg.sender === 'Me' ? 'outgoing' : 'incoming'}">
-            <div class="message-sender">${msg.sender}</div>
-            <div class="message-text">${msg.text}</div>
-        </div>
-      `).join('');
-    } else {
-      updateChatHistory(chat.messages);
-    }
-
-    chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+    updateChatHistory(chat.messages);
   };
 
   const updateChatHistory = (newMessages) => {
     const chatHistoryContainer = document.getElementById('chat-history');
-    const existingBubbles = chatHistoryContainer.querySelectorAll('.message-bubble');
-    const existingCount = existingBubbles.length;
-
-    // If newMessages is longer than current DOM, append only the new ones
-    if (newMessages.length > existingCount) {
-      const messagesToAppend = newMessages.slice(existingCount);
-      messagesToAppend.forEach(msg => {
-        const div = document.createElement('div');
-        div.className = `message-bubble ${msg.sender === 'Me' ? 'outgoing' : 'incoming'}`;
-        div.innerHTML = `
+    chatHistoryContainer.innerHTML = newMessages.map(msg => `
+      <div class="message-bubble ${msg.sender === 'Me' ? 'outgoing' : 'incoming'}">
           <div class="message-sender">${msg.sender}</div>
           <div class="message-text">${msg.text}</div>
-        `;
-        chatHistoryContainer.appendChild(div);
-      });
-      // Smooth scroll to bottom
-      chatHistoryContainer.scrollTo({ top: chatHistoryContainer.scrollHeight, behavior: 'smooth' });
-    }
+      </div>
+    `).join('');
+    // Scroll to the bottom immediately
+    chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
   };
 
   const backToChats = () => {

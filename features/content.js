@@ -33,13 +33,20 @@ function startObserver() {
                 if (url.includes('linkedin.com')) {
                     if (document.querySelector('.msg-s-event-listitem')) detected = true;
                 } else if (url.includes('whatsapp.com')) {
-                    // WhatsApp Specific: Monitor the main message list container directly if possible, 
-                    // or look for specific new message class signatures in added nodes.
-                    if (mutation.target.getAttribute('role') === 'application' ||
-                        mutation.target.classList.contains('_3K4-L') || // Common container class
-                        document.querySelector('.message-in, .message-out')) {
-                        detected = true;
+                    // Check if any added node is a message container or contains one
+                    let isMessageAdded = false;
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            if (node.getAttribute('data-testid') === 'msg-container' ||
+                                node.querySelector('[data-testid="msg-container"]') ||
+                                node.getAttribute('data-id') ||
+                                node.querySelector('[data-id]')) {
+                                isMessageAdded = true;
+                                break;
+                            }
+                        }
                     }
+                    if (isMessageAdded) detected = true;
                 } else if (url.includes('mail.google.com') || url.includes('chat.google.com')) {
                     if (document.querySelector('.adn, .nE57Xb, [role="listitem"]')) detected = true;
                 } else if (url.includes('slack.com')) {
@@ -174,14 +181,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         seenIds.add(msgId);
                     }
 
-                    // Detect sender using class name or data-id attribute (e.g. true_1234@c.us is sent by Me)
+                    // Detect sender using class name, data-id, or status/read receipt icons (100% reliable fallback)
+                    const hasStatusIcon = m.querySelector('[data-icon="msg-dblcheck"]') ||
+                        m.querySelector('[data-icon="msg-check"]') ||
+                        m.querySelector('[data-icon="msg-dblcheck-ack"]') ||
+                        m.querySelector('[data-icon="msg-time"]') ||
+                        m.querySelector('[data-icon*="check"]') ||
+                        m.querySelector('[data-icon*="status"]') ||
+                        m.querySelector('[aria-label="Read"]') ||
+                        m.querySelector('[aria-label="Delivered"]') ||
+                        m.querySelector('[aria-label="Sent"]') ||
+                        m.querySelector('[aria-label="Pending"]') ||
+                        m.querySelector('[aria-label*="read" i]') ||
+                        m.querySelector('[aria-label*="delivered" i]') ||
+                        m.querySelector('[aria-label*="sent" i]') ||
+                        m.querySelector('[aria-label*="pending" i]') ||
+                        m.querySelector('[data-testid="status-icon"]');
+
                     const isMe = m.classList.contains('message-out') ||
                         m.className.includes('message-out') ||
                         msgId?.startsWith('true') ||
-                        m.querySelector('[data-icon="msg-dblcheck"]') ||
-                        m.querySelector('[data-icon="msg-check"]') ||
-                        m.querySelector('[data-icon="msg-dblcheck-ack"]') ||
-                        false;
+                        msgId?.includes('true_') ||
+                        !!hasStatusIcon;
 
                     const textEl = m.querySelector('.selectable-text.copyable-text span') ||
                         m.querySelector('.copyable-text span') ||
@@ -271,38 +292,49 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse({ status: "error", message: e.message });
         }
     } else if (request.action === "SEND_MESSAGE") {
-        try {
-            const url = window.location.href;
-            let sendBtn = null;
+        const findAndClickSend = (attempts = 0) => {
+            try {
+                const url = window.location.href;
+                let sendBtn = null;
 
-            if (url.includes('linkedin.com')) {
-                sendBtn = document.querySelector('.msg-form__send-button');
-            } else if (url.includes('whatsapp.com')) {
-                sendBtn = document.querySelector('button[data-testid="compose-btn-send"]') ||
-                          document.querySelector('[data-testid="send"]') ||
-                          document.querySelector('button span[data-icon="send"]')?.parentElement;
-            } else if (url.includes('mail.google.com')) {
-                sendBtn = document.querySelector('.T-I.J-J5-Ji.aoO.v7.T-I-atl.L3');
-                // Could also be chat in mail
-                if (!sendBtn) sendBtn = document.querySelector('div[role="button"][aria-label="Send message"]');
-            } else if (url.includes('slack.com')) {
-                sendBtn = document.querySelector('.c-button-unstyled.c-icon_button--light.c-icon_button--size_medium.p-message_input__send');
-            } else if (url.includes('chat.google.com')) {
-                sendBtn = document.querySelector('div[role="button"][aria-label="Send message"], button[aria-label="Send message"], [data-tooltip="Send message"]');
-            }
+                if (url.includes('linkedin.com')) {
+                    sendBtn = document.querySelector('.msg-form__send-button');
+                } else if (url.includes('whatsapp.com')) {
+                    sendBtn = document.querySelector('button[data-testid="compose-btn-send"]') ||
+                              document.querySelector('[data-testid="send"]') ||
+                              document.querySelector('button span[data-icon="send"]')?.parentElement;
+                } else if (url.includes('mail.google.com')) {
+                    sendBtn = document.querySelector('.T-I.J-J5-Ji.aoO.v7.T-I-atl.L3') ||
+                              document.querySelector('div[role="button"][aria-label="Send message"]');
+                } else if (url.includes('slack.com')) {
+                    sendBtn = document.querySelector('.c-button-unstyled.c-icon_button--light.c-icon_button--size_medium.p-message_input__send');
+                } else if (url.includes('chat.google.com')) {
+                    sendBtn = document.querySelector('div[role="button"][aria-label="Send message"], button[aria-label="Send message"], [data-tooltip="Send message"]');
+                }
 
-            if (sendBtn) {
-                sendBtn.click();
-                sendResponse({ status: "success" });
-            } else {
-                // Try Enter key as fallback
-                const active = document.activeElement;
-                active.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-                sendResponse({ status: "success", info: "Attempted Enter key fallback" });
+                if (sendBtn && !sendBtn.disabled) {
+                    sendBtn.click();
+                    sendResponse({ status: "success" });
+                    return;
+                }
+
+                if (attempts < 10) {
+                    setTimeout(() => findAndClickSend(attempts + 1), 100);
+                } else {
+                    // Fallback to Enter key
+                    const active = document.activeElement;
+                    if (active) {
+                        active.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+                    }
+                    sendResponse({ status: "success", info: "Attempted Enter key fallback" });
+                }
+            } catch (err) {
+                sendResponse({ status: "error", message: err.message });
             }
-        } catch (e) {
-            sendResponse({ status: "error", message: e.message });
-        }
+        };
+
+        findAndClickSend();
+        return true; // Keep message channel open for async response
     }
     return true;
 });
