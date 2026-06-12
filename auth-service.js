@@ -384,7 +384,13 @@ async function handleEmailSignup() {
 
         if (error) {
             console.error('[RefineAI] Signup error:', error);
-            if (window.showToast) window.showToast(`Signup failed: ${error.message}`, 'error');
+            if (window.showToast) {
+                if (error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('limit exceeded')) {
+                    window.showToast('Rate limit hit! Please disable "Confirm email" in your Supabase Auth Dashboard settings.', 'error');
+                } else {
+                    window.showToast(`Signup failed: ${error.message}`, 'error');
+                }
+            }
         } else {
             if (data?.user && data.session) {
                 if (window.showToast) window.showToast('Sign up successful and logged in!', 'success');
