@@ -38,6 +38,7 @@ serve(async (req) => {
 
         const GROQ_KEY = Deno.env.get('GROQ_API_KEY');
         const GEMINI_KEY = Deno.env.get('GEMINI_API_KEY');
+        const ZAI_KEY = Deno.env.get('ZAI_API_KEY');
         const OPENROUTER_KEY = Deno.env.get('OPENROUTER_API_KEY');
 
         let response;
@@ -111,7 +112,35 @@ serve(async (req) => {
             }
         }
 
-        // 3. Try OpenRouter (Last resort)
+        // 3. Try Z.ai (Backup 2)
+        if (ZAI_KEY) {
+            try {
+                const zaiModel = Deno.env.get('ZAI_MODEL') || "glm-5.1";
+                response = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${ZAI_KEY}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: zaiModel,
+                        messages: messages
+                    })
+                });
+
+                if (response.status === 200) {
+                    const data = await response.json();
+                    return new Response(JSON.stringify(data), {
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                    });
+                }
+                errorMsg += ` | Z.ai Error: ${response.status}`;
+            } catch (e) {
+                errorMsg += ` | Z.ai Failed: ${(e as Error).message}`;
+            }
+        }
+
+        // 4. Try OpenRouter (Last resort)
         if (OPENROUTER_KEY) {
             try {
                 const openRouterModel = Deno.env.get('OPENROUTER_MODEL') || "meta-llama/llama-3.3-70b-instruct";
