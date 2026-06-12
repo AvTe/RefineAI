@@ -33,20 +33,10 @@ function startObserver() {
                 if (url.includes('linkedin.com')) {
                     if (document.querySelector('.msg-s-event-listitem')) detected = true;
                 } else if (url.includes('whatsapp.com')) {
-                    // Check if any added node is a message container or contains one
-                    let isMessageAdded = false;
-                    for (const node of mutation.addedNodes) {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            if (node.getAttribute('data-testid') === 'msg-container' ||
-                                node.querySelector('[data-testid="msg-container"]') ||
-                                node.getAttribute('data-id') ||
-                                node.querySelector('[data-id]')) {
-                                isMessageAdded = true;
-                                break;
-                            }
-                        }
+                    const chatMain = document.getElementById('main');
+                    if (chatMain && chatMain.contains(mutation.target)) {
+                        detected = true;
                     }
-                    if (isMessageAdded) detected = true;
                 } else if (url.includes('mail.google.com') || url.includes('chat.google.com')) {
                     if (document.querySelector('.adn, .nE57Xb, [role="listitem"]')) detected = true;
                 } else if (url.includes('slack.com')) {
