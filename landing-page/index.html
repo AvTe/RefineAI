@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RefineAI | Your Smart Communication Assistant</title>
+    <meta name="description"
+        content="Instantly rewrite, rephrase, and generate smart replies with RefineAI. The all-in-one Chrome extension for professional and human-like communication.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="icon" type="image/png" href="favicon.png">
+</head>
+
+<body>
+    <header>
+        <div class="container nav-content">
+            <a href="index.html" class="logo">
+                <img src="logo.png" alt="RefineAI Logo" class="logo-img">
+                <span>RefineAI</span>
+            </a>
+
+            <nav class="nav-links desktop-nav">
+                <a href="#features">Features</a>
+                <a href="pricing.html">Pricing</a>
+                <a href="privacy.html">Privacy</a>
+                <a href="terms.html">Terms</a>
+                <a href="https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe"
+                    target="_blank" class="cta-button primary-cta">Install Now</a>
+            </nav>
+
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Menu">
+                <i data-lucide="menu"></i>
+            </button>
+        </div>
+
+        <!-- Mobile Navigation Overlay -->
+        <div class="mobile-nav" id="mobile-nav">
+            <div class="mobile-nav-header">
+                <a href="index.html" class="logo">
+                    <img src="logo.png" alt="RefineAI Logo" class="logo-img">
+                    <span>RefineAI</span>
+                </a>
+                <button class="close-menu" id="close-menu">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="mobile-nav-links">
+                <a href="#features" class="mobile-link">Features</a>
+                <a href="pricing.html" class="mobile-link">Pricing</a>
+                <a href="privacy.html" class="mobile-link">Privacy</a>
+                <a href="terms.html" class="mobile-link">Terms</a>
+                <a href="https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe"
+                    target="_blank" class="cta-button primary-cta mobile-cta">Install Now</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <div class="badge">Trusted by professionals worldwide</div>
+                <h1>Write Better. <br> <span class="gradient-text">Communicate Smarter.</span></h1>
+                <p>The premium Chrome extension that transforms your rough drafts into polished, human-like messages
+                    across WhatsApp, LinkedIn, and Gmail.</p>
+                <div class="hero-actions">
+                    <a href="https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe"
+                        target="_blank" class="cta-button primary-cta">
+                        <i data-lucide="chrome"></i>
+                        Add to Chrome — It's Free
+                    </a>
+                </div>
+                <div class="hero-image-wrapper fade-in-up">
+                    <img src="image 7.png" alt="RefineAI Interface" class="hero-image">
+                    <div class="glass-card floating-card-1">
+                        <i data-lucide="check-circle" style="color: #10B981"></i>
+                        <span>Grammar Refined</span>
+                    </div>
+                    <div class="glass-card floating-card-2">
+                        <i data-lucide="message-square" style="color: #FF8C00"></i>
+                        <span>Smart Reply Sent</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <div class="section-tag">Powerful Features</div>
+                <h2 class="section-title">Everything you need to <br> master your communication.</h2>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper">
+                            <i data-lucide="sparkles"></i>
+                        </div>
+                        <h3>Smart AI Replies</h3>
+                        <p>Generate context-aware, human-like replies instantly. Customize tone and emojis to match your
+                            vibe.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper">
+                            <i data-lucide="mail"></i>
+                        </div>
+                        <h3>Email Excellence</h3>
+                        <p>Convert bullet points into professional emails. Perfect for sales, follow-ups, and
+                            networking.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper">
+                            <i data-lucide="refresh-cw"></i>
+                        </div>
+                        <h3>Instant Rewriting</h3>
+                        <p>Change your tone from formal to casual with one click while maintaining your unique brand
+                            voice.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper">
+                            <i data-lucide="shield-check"></i>
+                        </div>
+                        <h3>Grammar Polish</h3>
+                        <p>Fix complex grammar issues and improve overall flow without losing your personal touch.</p>
+                    </div>
+                </div>
+            </div>
+            <section id="showcase" class="showcase">
+                <div class="container">
+                    <div class="section-tag">Direct Preview</div>
+                    <h2 class="section-title">Built for efficiency. <br>Designed for clarity.</h2>
+
+                    <div class="showcase-grid">
+                        <div class="showcase-item" data-aos="fade-up">
+                            <div class="showcase-text">
+                                <span class="step-number">01</span>
+                                <h3>Contextual Smart Replies</h3>
+                                <p>RefineAI understands the conversation. Whether it's a casual WhatsApp chat or a
+                                    LinkedIn outreach, get replies that sound like you—only better.</p>
+                            </div>
+                            <div class="showcase-image">
+                                <img src="smart-reply.png" alt="Smart Reply Feature">
+                            </div>
+                        </div>
+
+                        <div class="showcase-item reverse" data-aos="fade-up">
+                            <div class="showcase-image">
+                                <img src="email-writer.png" alt="Email Writer Feature">
+                            </div>
+                            <div class="showcase-text">
+                                <span class="step-number">02</span>
+                                <h3>Professional Email Drafter</h3>
+                                <p>Stop staring at a blank screen. Input key points and let RefineAI draft a structured,
+                                    professional email in seconds.</p>
+                            </div>
+                        </div>
+
+                        <div class="showcase-item" data-aos="fade-up">
+                            <div class="showcase-text">
+                                <span class="step-number">03</span>
+                                <h3>History & Personalization</h3>
+                                <p>Never lose a great rewrite. Access your history anytime and customize your AI persona
+                                    to maintain absolute consistency.</p>
+                            </div>
+                            <div class="showcase-image">
+                                <img src="history.png" alt="History and Settings">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <i data-lucide="sparkles"></i>
+                        <span>RefineAI</span>
+                    </div>
+                    <p>Elevating digital communication through the power of artificial intelligence.</p>
+                </div>
+                <div class="footer-nav">
+                    <h4>Product</h4>
+                    <a href="#features">Features</a>
+                    <a href="https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe"
+                        target="_blank">Install</a>
+                </div>
+                <div class="footer-nav">
+                    <h4>Legal</h4>
+                    <a href="privacy.html">Privacy Policy</a>
+                    <a href="terms.html">Terms of Service</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 RefineAI. Built for professionals everywhere.</p>
+                <div class="social-links">
+                    <a href="https://github.com/Avte/" target="_blank"><i data-lucide="github"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        // Mobile Menu Toggle Logic
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const mobileNav = document.getElementById('mobile-nav');
+        const mobileLinks = document.querySelectorAll('.mobile-link');
+
+        const toggleMenu = () => {
+            mobileNav.classList.toggle('active');
+            document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
+        };
+
+        menuToggle.addEventListener('click', toggleMenu);
+        closeMenu.addEventListener('click', toggleMenu);
+
+        mobileLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                mobileNav.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+        });
+    </script>
+</body>
+
+</html>

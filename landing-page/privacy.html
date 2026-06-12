@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy | RefineAI</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
+        rel="stylesheet">
+    <link rel="icon" type="image/png" href="favicon.png">
+</head>
+
+<body>
+    <header>
+        <div class="container nav-content">
+            <a href="index.html" class="logo">
+                <img src="logo.png" alt="RefineAI Logo" class="logo-img">
+                <span>RefineAI</span>
+            </a>
+
+            <nav class="nav-links desktop-nav">
+                <a href="index.html">Home</a>
+                <a href="terms.html">Terms</a>
+                <a href="https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe"
+                    target="_blank" class="cta-button primary-cta">Install Now</a>
+            </nav>
+
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Menu">
+                <i data-lucide="menu"></i>
+            </button>
+        </div>
+
+        <!-- Mobile Navigation Overlay -->
+        <div class="mobile-nav" id="mobile-nav">
+            <div class="mobile-nav-header">
+                <a href="index.html" class="logo">
+                    <img src="logo.png" alt="RefineAI Logo" class="logo-img">
+                    <span>RefineAI</span>
+                </a>
+                <button class="close-menu" id="close-menu">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="mobile-nav-links">
+                <a href="index.html" class="mobile-link">Home</a>
+                <a href="terms.html" class="mobile-link">Terms</a>
+                <a href="https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe"
+                    target="_blank" class="cta-button primary-cta mobile-cta">Install Now</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container legal-content">
+        <h1>Privacy Policy</h1>
+        <p>Last Updated: January 23, 2026</p>
+
+        <p>At RefineAI, we take your privacy seriously. This Privacy Policy describes how we collect, use, and protect
+            your information when you use our Chrome extension.</p>
+
+        <h2>1. Overview</h2>
+        <p>RefineAI is a productivity tool designed to help you rewrite and refine text. Our core philosophy is that
+            your data belongs to you. We do not sell your data, and we do not store your personal conversations on our
+            servers.</p>
+
+        <h2>2. Information We Collect</h2>
+        <ul>
+            <li><strong>Text Content:</strong> When you use RefineAI to rewrite or reply to a message, the selected text
+                is sent to our AI providers (Groq or Google Gemini) for processing. We do not store this text once the
+                request is complete.</li>
+            <li><strong>Settings & Preferences:</strong> Your custom persona, target language, and usage stats are
+                stored locally on your device using Chrome's local storage. This data never leaves your computer unless
+                you explicitly interact with the AI.</li>
+            <li><strong>Technical Data:</strong> We may collect anonymous, non-identifying technical data (such as
+                version number or extension errors) to help us improve the tool.</li>
+        </ul>
+
+        <h2>3. How We Use Information</h2>
+        <p>We use the text content provided solely to generate the AI responses you request. We do not use your data to
+            train our own models or share it with third parties for marketing purposes.</p>
+
+        <h2>4. Data Security</h2>
+        <p>We use industry-standard encryption to protect text while it is in transit to our AI providers. Our providers
+            (Groq and Google) have their own strict privacy policies regarding how they handle data processed through
+            their APIs.</p>
+
+        <h2>5. Third-Party Services</h2>
+        <p>RefineAI integrates with third-party AI models. By using the extension, you agree to the privacy policies of
+            these providers:</p>
+        <ul>
+            <li><a href="https://groq.com/privacy/" target="_blank">Groq Privacy Policy</a></li>
+            <li><a href="https://policies.google.com/privacy" target="_blank">Google Privacy Policy</a></li>
+        </ul>
+
+        <h2>6. Changes to This Policy</h2>
+        <p>We may update our Privacy Policy from time to time. We will notify users of any significant changes by
+            updating the "Last Updated" date at the top of this page.</p>
+
+        <h2>7. Contact Us</h2>
+        <p>If you have any questions about this Privacy Policy, please contact us at via our <a
+                href="https://github.com/Avte/">GitHub profile</a>.</p>
+    </div>
+
+    <footer>
+        <div class="container footer-content">
+            <p>&copy; 2026 RefineAI. All rights reserved.</p>
+            <div class="footer-links">
+                <a href="index.html">Home</a>
+                <a href="terms.html">Terms</a>
+            </div>
+        </div>
+    </footer>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        lucide.createIcons();
+
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const mobileNav = document.getElementById('mobile-nav');
+
+        const toggleMenu = () => {
+            mobileNav.classList.toggle('active');
+            document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
+        };
+
+        menuToggle.addEventListener('click', toggleMenu);
+        closeMenu.addEventListener('click', toggleMenu);
+    </script>
+</body>
+
+</html>

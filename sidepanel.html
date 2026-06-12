@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="RefineAI: The ultimate AI rewriter and paraphrasing tool. Rewrite sentences, fix grammar, and improve writing style instantly on Gmail, LinkedIn, and any website.">
+  <title>RefineAI: AI Rewriter, Grammar Checker & Paraphraser</title>
+  <link rel="stylesheet" href="sidepanel.css">
+  <link rel="stylesheet" href="features/featureStyles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://yqoyweqarzezcvdcgnzk.supabase.co" crossorigin>
+  <link rel="dns-prefetch" href="https://api.groq.com">
+  <link rel="dns-prefetch" href="https://generativelanguage.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <!-- Local copies to comply with Chrome Extension Security Policy (CSP) -->
+  <script src="lib/lucide.min.js"></script>
+  <script src="lib/supabase.js"></script>
+  <script>
+    // Theme initialization to prevent flash
+    (function () {
+      const savedTheme = localStorage.getItem('theme');
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const isDark = savedTheme === 'dark' || (!savedTheme && systemPrefersDark);
+      if (isDark) {
+        document.documentElement.classList.add('dark-theme');
+      } else {
+        document.documentElement.classList.add('light-theme');
+      }
+    })();
+  </script>
+</head>
+
+<body>
+  <!-- Onboarding Wizard (first-time users only) -->
+  <div id="onboarding-overlay" class="onboarding-overlay" style="display: none;">
+    <div class="onboarding-backdrop"></div>
+    <div class="onboarding-card">
+      <!-- Step 1: Welcome -->
+      <div class="onboard-step active" data-step="1">
+        <div class="onboard-icon">✨</div>
+        <h2>Welcome to RefineAI</h2>
+        <p>Your AI writing assistant that rewrites, fixes grammar, and changes tone — right in your browser.</p>
+      </div>
+      <!-- Step 2: Input -->
+      <div class="onboard-step" data-step="2">
+        <div class="onboard-icon">📝</div>
+        <h2>Paste Your Text</h2>
+        <p>Type or paste any text into the editor. You can also right-click selected text on any page and choose "Refine
+          with RefineAI".</p>
+      </div>
+      <!-- Step 3: Tools -->
+      <div class="onboard-step" data-step="3">
+        <div class="onboard-icon">🛠️</div>
+        <h2>Choose Your Action</h2>
+        <p>Pick from Rewrite, Rephrase, Grammar Fix, Shorten, Expand, or change the Tone. Use <kbd>Ctrl+Enter</kbd> to
+          submit quickly.</p>
+      </div>
+      <!-- Step 4: Output -->
+      <div class="onboard-step" data-step="4">
+        <div class="onboard-icon">🚀</div>
+        <h2>You're All Set!</h2>
+        <p>Copy with <kbd>Ctrl+Shift+C</kbd>, insert directly into webpages, or undo with <kbd>Ctrl+Z</kbd>. Happy
+          writing!</p>
+      </div>
+      <!-- Navigation -->
+      <div class="onboard-nav">
+        <div class="onboard-dots">
+          <span class="onboard-dot active" data-dot="1"></span>
+          <span class="onboard-dot" data-dot="2"></span>
+          <span class="onboard-dot" data-dot="3"></span>
+          <span class="onboard-dot" data-dot="4"></span>
+        </div>
+        <button id="onboard-next" class="primary-btn-large">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Initial Loading State (shown while checking session) -->
+    <div id="loading-view" class="loading-overlay">
+      <div class="loading-content">
+        <div class="loading-logo-container">
+          <img src="icons/icon128.png" alt="RefineAI" class="loading-logo pulse-animation">
+        </div>
+        <div class="loading-text">
+          <span class="loading-dots">Initializing</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auth View Overlay -->
+    <div id="auth-view" class="view auth-overlay" style="display: none;">
+      <!-- Floating particles for visual interest -->
+      <div class="auth-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+      </div>
+
+      <div class="auth-card">
+        <div class="auth-brand">
+          <img src="icons/icon128.png" alt="RefineAI Logo" class="auth-logo-img">
+          <div class="auth-logo-text">RefineAI</div>
+        </div>
+
+        <h1>Elevate Your Writing</h1>
+        <p class="auth-subtitle">Transform your words with the power of AI</p>
+
+        <!-- Features List -->
+        <div class="auth-features">
+          <div class="auth-feature">
+            <i data-lucide="zap" class="feature-icon"></i>
+            <span>Instant rewrites & grammar fixes</span>
+          </div>
+          <div class="auth-feature">
+            <i data-lucide="sparkles" class="feature-icon"></i>
+            <span>Multiple tones & styles</span>
+          </div>
+          <div class="auth-feature">
+            <i data-lucide="cloud" class="feature-icon"></i>
+            <span>Sync across all devices</span>
+          </div>
+        </div>
+
+        <button id="google-login-btn" class="google-auth-btn">
+          <svg class="google-icon" width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M17.64 9.20455C17.64 8.56636 17.5827 7.95273 17.4764 7.36364H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H14.9564C16.6582 14.2527 17.64 11.9455 17.64 9.20455Z"
+              fill="#4285F4" />
+            <path
+              d="M9 18C11.43 18 13.4673 17.1941 14.9564 15.8195L12.0477 13.5614C11.2418 14.1014 10.2109 14.4205 9 14.4205C6.65591 14.4205 4.67182 12.8373 3.96409 10.71H0.957273V13.0418C2.43818 15.9832 5.48182 18 9 18Z"
+              fill="#34A853" />
+            <path
+              d="M3.96409 10.71C3.78409 10.17 3.68182 9.59318 3.68182 9C3.68182 8.40682 3.78409 7.83 3.96409 7.29V4.95818H0.957273C0.347727 6.17318 0 7.54773 0 9C0 10.4523 0.347727 11.8268 0.957273 13.0418L3.96409 10.71Z"
+              fill="#FBBC05" />
+            <path
+              d="M9 3.57955C10.3214 3.57955 11.5077 4.03364 12.4405 4.92545L15.0218 2.34409C13.4632 0.891818 11.4259 0 9 0C5.48182 0 2.43818 2.01682 0.957273 4.95818L3.96409 7.29C4.67182 5.16273 6.65591 3.57955 9 3.57955Z"
+              fill="#EA4335" />
+          </svg>
+          <span class="btn-text">Continue with Google</span>
+          <div class="btn-loader" style="display: none;">
+            <div class="spinner"></div>
+          </div>
+        </button>
+
+        <p class="auth-footer">
+          <i data-lucide="shield-check" class="footer-icon"></i>
+          Secure login powered by Google
+        </p>
+      </div>
+    </div>
+
+    <div id="app-main-content" style="display: none;">
+      <header class="app-header">
+        <div class="header-content">
+          <div class="logo-wrapper" id="go-home">
+            <i data-lucide="sparkles" class="logo-icon"></i>
+            <span class="logo-text">RefineAI</span>
+          </div>
+          <div class="header-actions">
+            <button class="icon-btn-minimal" id="history-btn" title="History">
+              <i data-lucide="history"></i>
+            </button>
+            <button class="icon-btn-minimal" id="settings-btn" title="Settings">
+              <i data-lucide="settings"></i>
+            </button>
+            <!-- User Profile Avatar -->
+            <div class="user-profile-wrapper">
+              <button class="user-avatar-btn" id="user-avatar-btn" title="Account">
+                <img id="user-avatar-img" src="icons/icon48.png" alt="User Avatar" class="user-avatar-img">
+              </button>
+              <div class="user-dropdown" id="user-dropdown">
+                <div class="user-dropdown-header">
+                  <img id="dropdown-avatar" src="icons/icon48.png" alt="Avatar" class="dropdown-avatar">
+                  <div class="user-info">
+                    <span id="user-name" class="user-name">User</span>
+                    <span id="user-email" class="user-email">email@example.com</span>
+                  </div>
+                </div>
+                <div class="user-dropdown-divider"></div>
+                <button class="user-dropdown-item" id="logout-btn">
+                  <i data-lucide="log-out"></i>
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Navigation Header for sub-views (hidden by default) -->
+      <div class="sub-header" id="sub-header">
+        <button class="back-btn" id="back-btn">
+          <i data-lucide="chevron-left"></i>
+          <span id="sub-header-title">Settings</span>
+        </button>
+      </div>
+
+      <main class="app-main">
+        <!-- MAIN VIEW -->
+        <div id="main-view" class="view active">
+          <div class="composer-card">
+            <div class="toolbar-section">
+              <div class="tools-tabs-container">
+                <div class="writing-slider" id="writing-slider">
+                  <button class="tool-btn active" data-action="rewrite">
+                    <i data-lucide="pencil-line"></i>
+                    <span>Rewrite</span>
+                  </button>
+                  <button class="tool-btn" data-action="rephrase">
+                    <i data-lucide="refresh-cw"></i>
+                    <span>Rephrase</span>
+                  </button>
+                  <button class="tool-btn" data-action="grammar">
+                    <i data-lucide="shield-check"></i>
+                    <span>Grammar</span>
+                  </button>
+                  <button class="tool-btn" data-action="tone">
+                    <i data-lucide="smile"></i>
+                    <span>Tone</span>
+                  </button>
+                  <button class="tool-btn" data-action="shorten">
+                    <i data-lucide="minimize-2"></i>
+                    <span>Shorten</span>
+                  </button>
+                  <button class="tool-btn" data-action="expand">
+                    <i data-lucide="maximize-2"></i>
+                    <span>Expand</span>
+                  </button>
+                </div>
+                <div class="utility-actions">
+                  <button class="icon-btn-minimal nav-tool-btn" id="main-reply-btn" title="Smart Reply">
+                    <i data-lucide="message-square"></i>
+                  </button>
+                  <button class="icon-btn-minimal nav-tool-btn" id="main-email-btn" title="Email Writer">
+                    <i data-lucide="mail"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- TONE SELECTOR DRAWER (Compact Carousel Style) -->
+            <div class="tone-drawer" id="tone-drawer">
+              <div class="drawer-header">
+                <span class="drawer-title">SELECT TONE</span>
+                <button class="suggest-badge-premium" id="suggest-tone-btn">
+                  <i data-lucide="sparkles"></i>
+                  <span>Suggest for me</span>
+                </button>
+                <button class="drawer-close-minimal" id="close-tone-drawer">
+                  <i data-lucide="x"></i>
+                </button>
+              </div>
+              <div class="tone-carousel" id="tone-slider">
+                <button class="tone-card" data-tone="Formal">
+                  <i data-lucide="user-check"></i>
+                  <span>Formal</span>
+                </button>
+                <button class="tone-card" data-tone="Informal">
+                  <i data-lucide="home"></i>
+                  <span>Informal</span>
+                </button>
+                <button class="tone-card" data-tone="Professional">
+                  <i data-lucide="briefcase"></i>
+                  <span>Professional</span>
+                </button>
+                <button class="tone-card" data-tone="Persuasive">
+                  <i data-lucide="target"></i>
+                  <span>Persuasive</span>
+                </button>
+                <button class="tone-card" data-tone="Neutral">
+                  <i data-lucide="minus-circle"></i>
+                  <span>Neutral</span>
+                </button>
+                <button class="tone-card" data-tone="Friendly">
+                  <i data-lucide="smile"></i>
+                  <span>Friendly</span>
+                </button>
+                <button class="tone-card" data-tone="Confident">
+                  <i data-lucide="zap"></i>
+                  <span>Confident</span>
+                </button>
+                <button class="tone-card" data-tone="Empathetic">
+                  <i data-lucide="heart"></i>
+                  <span>Empathetic</span>
+                </button>
+                <button class="tone-card" data-tone="Informative">
+                  <i data-lucide="book-open"></i>
+                  <span>Informative</span>
+                </button>
+                <button class="tone-card" data-tone="Instructional">
+                  <i data-lucide="list-checks"></i>
+                  <span>Instructional</span>
+                </button>
+                <button class="tone-card" data-tone="Creative">
+                  <i data-lucide="palette"></i>
+                  <span>Creative</span>
+                </button>
+                <button class="tone-card" data-tone="Technical">
+                  <i data-lucide="cpu"></i>
+                  <span>Technical</span>
+                </button>
+                <button class="tone-card" data-tone="Authoritative">
+                  <i data-lucide="landmark"></i>
+                  <span>Authoritative</span>
+                </button>
+                <button class="tone-card" data-tone="Motivational">
+                  <i data-lucide="rocket"></i>
+                  <span>Motivational</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="editor-section">
+              <div class="editor-container">
+                <div class="editor-header">
+                  <div class="header-left">
+                    <span class="editor-label">Input Text</span>
+                    <span class="word-badge" id="word-count">0 words</span>
+                  </div>
+                  <div class="header-right">
+                    <select id="target-language" class="language-select">
+                      <option value="">KEEP LANGUAGE</option>
+                      <option value="English">ENGLISH</option>
+                      <option value="Hindi">HINDI</option>
+                      <option value="Spanish">SPANISH</option>
+                      <option value="French">FRENCH</option>
+                      <option value="German">GERMAN</option>
+                    </select>
+                  </div>
+                </div>
+                <textarea id="input-text" placeholder="Paste or type your text here..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="output-container" id="output-section-ui" style="display: none;">
+            <div class="editor-header">
+              <span class="editor-label">Refined Result</span>
+              <div class="output-actions">
+                <button id="diff-btn" class="icon-btn-text" title="Show Changes">
+                  <i data-lucide="list-checks"></i>
+                </button>
+                <button id="insert-btn" class="icon-btn-text" title="Insert into Page">
+                  <i data-lucide="external-link"></i>
+                </button>
+                <button id="copy-btn" class="icon-btn-text" title="Copy to Clipboard">
+                  <i data-lucide="copy"></i>
+                </button>
+              </div>
+            </div>
+            <div class="output-content">
+              <textarea id="output-text" readonly placeholder="Result will appear here..."></textarea>
+              <div id="diff-display" class="diff-display" style="display: none;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EMAIL WRITER VIEW -->
+        <div id="email-view" class="view">
+          <!-- QUICK PRESETS (Horizontal Scroll) -->
+          <div class="presets-section">
+            <span class="tiny-label">QUICK START</span>
+            <div class="presets-slider">
+              <button class="preset-chip" data-purpose="Follow-up on our meeting"
+                data-context="Thank them for the time and mention next steps.">
+                <i data-lucide="calendar-check"></i>
+                <span>Follow-up</span>
+              </button>
+              <button class="preset-chip" data-purpose="Introduction request"
+                data-context="Explain who I am and why I want to connect.">
+                <i data-lucide="user-plus"></i>
+                <span>Intro</span>
+              </button>
+              <button class="preset-chip" data-purpose="Coffee Chat"
+                data-context="Ask if they are free for a 15 min chat next week.">
+                <i data-lucide="coffee"></i>
+                <span>Coffee Chat</span>
+              </button>
+              <button class="preset-chip" data-purpose="Project Update"
+                data-context="Summary of what was completed this week.">
+                <i data-lucide="bar-chart-3"></i>
+                <span>Update</span>
+              </button>
+              <button class="preset-chip" data-purpose="Job Application"
+                data-context="Mention interest in the role and why I am a good fit.">
+                <i data-lucide="briefcase"></i>
+                <span>Job App</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="email-form-premium">
+            <!-- MODE SWITCHER -->
+            <div class="mode-tabs">
+              <button class="mode-tab active" data-mode="fresh">Fresh Write</button>
+              <button class="mode-tab" data-mode="improve">Improve Draft</button>
+            </div>
+
+            <!-- NAME GRID -->
+            <div class="form-grid-2">
+              <div class="form-group">
+                <div class="label-row">
+                  <label class="form-label">Sender</label>
+                  <button class="magic-fill-btn" id="magic-fill-sender" title="Auto-fill your name">
+                    <i data-lucide="sparkles"></i>
+                  </button>
+                </div>
+                <input type="text" id="sender-name" placeholder="Your Name">
+              </div>
+              <div class="form-group">
+                <div class="label-row">
+                  <label class="form-label">Recipient</label>
+                  <button class="magic-fill-btn" id="magic-fill-recipient" title="Auto-fill from page">
+                    <i data-lucide="sparkles"></i>
+                  </button>
+                </div>
+                <input type="text" id="recipient-name" placeholder="Their Name">
+              </div>
+            </div>
+
+            <!-- DYNAMIC INPUT (Changes based on mode) -->
+            <div class="form-group" id="purpose-group">
+              <label class="form-label">What is the purpose?</label>
+              <input type="text" id="email-purpose" placeholder="e.g. Requesting a 1:1 meeting">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" id="context-label">Key Details / Context</label>
+              <textarea id="email-details" placeholder="Add specific points to include..."></textarea>
+            </div>
+
+            <!-- TONE & LENGTH SELECTOR -->
+            <div class="email-settings-row">
+              <div class="setting-col">
+                <label class="tiny-label">TONE</label>
+                <div class="chip-selector" id="email-tone-selector">
+                  <button class="select-chip active" data-value="professional">Professional</button>
+                  <button class="select-chip" data-value="friendly">Friendly</button>
+                  <button class="select-chip" data-value="urgent">Urgent</button>
+                </div>
+              </div>
+              <div class="setting-col">
+                <label class="tiny-label">LENGTH</label>
+                <div class="chip-selector" id="email-length-selector">
+                  <button class="select-chip" data-value="short">Short</button>
+                  <button class="select-chip active" data-value="medium">Medium</button>
+                  <button class="select-chip" data-value="long">Long</button>
+                </div>
+              </div>
+            </div>
+
+            <button id="generate-email-btn" class="primary-btn-large">
+              <i data-lucide="sparkles"></i>
+              <span>Generate Gold Email</span>
+            </button>
+          </div>
+
+          <div class="output-container" id="email-output-section" style="display: none;">
+            <div class="editor-header">
+              <span class="editor-label">Generated Email</span>
+              <div class="output-actions">
+                <button id="insert-email-btn" class="icon-btn-text" title="Insert into Page">
+                  <i data-lucide="external-link"></i>
+                </button>
+                <button id="copy-email-btn" class="icon-btn-text" title="Copy to Clipboard">
+                  <i data-lucide="copy"></i>
+                </button>
+              </div>
+            </div>
+            <div class="output-content">
+              <textarea id="email-output-text" readonly></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- SMART REPLY VIEW -->
+        <div id="smart-view" class="view">
+          <div class="smart-reply-outer">
+            <!-- Chat List View -->
+            <div id="smart-chat-list-view">
+              <div class="section-header-row" style="margin-bottom: 16px;">
+                <h3 class="settings-subtitle">Your Conversations</h3>
+                <button class="primary-btn-small" id="new-chat-btn">
+                  <i data-lucide="plus"></i>
+                  <span>New Chat</span>
+                </button>
+              </div>
+              <div id="smart-chat-list" class="smart-chat-list">
+                <!-- Dynamically populated -->
+                <div class="empty-state">
+                  <i data-lucide="message-square"></i>
+                  <p>No saved conversations. Click "New Chat" while on a messaging site.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Active Chat View (Hidden by default) -->
+            <div id="smart-active-chat-view" style="display: none;">
+              <div class="section-header-row" style="margin-bottom: 12px;">
+                <button class="icon-btn-minimal" id="back-to-chats-btn" title="Back to All Chats">
+                  <i data-lucide="chevron-left"></i>
+                  <span>All Chats</span>
+                </button>
+                <h3 class="settings-subtitle" id="active-chat-title">Current Chat</h3>
+              </div>
+
+              <div class="smart-reply-container">
+                <!-- Context Section -->
+                <div class="settings-section">
+                  <div class="section-header-row">
+                    <h3 class="settings-subtitle">Detected Context</h3>
+                    <button class="icon-btn-minimal" id="refresh-context" title="Refresh Context">
+                      <i data-lucide="rotate-cw"></i>
+                    </button>
+                  </div>
+                  <div id="chat-history" class="chat-history">
+                    <!-- Messages injected here -->
+                  </div>
+                </div>
+
+                <!-- Controls Section -->
+                <div class="settings-section">
+                  <div class="setting-item">
+                    <div class="setting-info">
+                      <span class="setting-name">Auto-Reply Mode</span>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="auto-reply-toggle">
+                      <span class="slider round"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Suggestions Section -->
+                <div class="settings-section">
+                  <h3 class="settings-subtitle">AI Suggestions</h3>
+                  <div id="smart-suggestions" class="suggestions-list"></div>
+                  <div class="manual-request" style="margin-top: 10px;">
+                    <button id="get-suggestions-btn" class="primary-btn-large">
+                      <i data-lucide="sparkles"></i>
+                      <span>Get New Suggestions</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Editor Section -->
+                <div class="output-container" id="smart-output-section" style="display: none;">
+                  <div class="editor-header">
+                    <span class="editor-label">Draft Reply</span>
+                    <div class="output-actions">
+                      <button id="send-smart-btn" class="icon-btn-text" title="Insert & Send">
+                        <i data-lucide="send"></i>
+                      </button>
+                      <button id="insert-smart-btn" class="icon-btn-text" title="Insert into Page">
+                        <i data-lucide="external-link"></i>
+                      </button>
+                      <button id="copy-smart-btn" class="icon-btn-text" title="Copy to Clipboard">
+                        <i data-lucide="copy"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="output-content">
+                    <textarea id="smart-reply-text" placeholder="Select a suggestion or type here..."></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS VIEW -->
+        <div id="settings-view" class="view">
+          <div class="settings-list">
+            <!-- Account Section -->
+            <div class="settings-section">
+              <h3 class="settings-subtitle">Account</h3>
+              <div class="account-card">
+                <div class="account-header">
+                  <img id="settings-avatar" src="icons/icon48.png" alt="Avatar" class="account-avatar">
+                  <div class="account-info">
+                    <span id="settings-user-name" class="account-name">User</span>
+                    <span id="settings-user-email" class="account-email">email@example.com</span>
+                  </div>
+                </div>
+                <div class="account-stats">
+                  <div class="stat-item">
+                    <span class="stat-label">Current Plan</span>
+                    <span id="user-plan" class="stat-value plan-badge free">Free</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Credits Used Today</span>
+                    <span id="credits-used" class="stat-value">0 / 2,000</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Total Credits</span>
+                    <span id="total-credits" class="stat-value">2,000</span>
+                  </div>
+                </div>
+                <div class="credit-progress-container">
+                  <div class="credit-progress-bar">
+                    <div id="credit-progress" class="credit-progress-fill" style="width: 0%"></div>
+                  </div>
+                  <span class="credit-progress-text" id="credit-percent">0% used</span>
+                </div>
+                <button class="upgrade-btn" id="upgrade-btn">
+                  <i data-lucide="zap"></i>
+                  <span>Upgrade to Premium</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3 class="settings-subtitle">Appearance</h3>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <span class="setting-name">Dark Mode</span>
+                  <span class="setting-desc">Switch between light and dark themes</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="dark-mode-toggle">
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3 class="settings-subtitle">Persona & Brand Voice</h3>
+              <div class="persona-container">
+                <label class="persona-label">Your Persona / Tone</label>
+                <textarea id="persona-input"
+                  placeholder="e.g. I am a tech startup founder with a friendly but direct tone."></textarea>
+                <p class="setting-tip" style="margin-top: 8px;">This will be applied to every AI refinement.</p>
+                <button class="primary-btn-small" id="save-persona-btn" style="margin-top: 8px; width: 100%;">Save
+                  Persona</button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3 class="settings-subtitle">About</h3>
+              <div class="setting-item">
+                <span class="setting-name">Version</span>
+                <span class="usage-value">1.1.0</span>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3 class="settings-subtitle">Connect with us</h3>
+              <div class="social-links">
+                <a href="https://refine-ai-site.vercel.app/" target="_blank" class="social-btn"
+                  title="Official Website">
+                  <i data-lucide="globe"></i>
+                  <span>Website</span>
+                </a>
+                <a href="https://github.com/Avte/" target="_blank" class="social-btn" title="GitHub">
+                  <i data-lucide="github"></i>
+                  <span>GitHub</span>
+                </a>
+                <a href="https://www.linkedin.com/in/amit-vishwakarma-b46380193/" target="_blank" class="social-btn"
+                  title="LinkedIn">
+                  <i data-lucide="linkedin"></i>
+                  <span>LinkedIn</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HISTORY VIEW -->
+        <div id="history-view" class="view">
+          <div class="history-actions">
+            <button class="text-btn-danger" id="clear-history">Clear All</button>
+          </div>
+          <div id="history-list" class="history-list">
+            <!-- History items will be injected here -->
+            <div class="empty-state">
+              <i data-lucide="clock"></i>
+              <p>No history yet. Start refining!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- UPGRADE/PRICING VIEW -->
+        <div id="upgrade-view" class="view">
+          <div class="upgrade-container">
+            <div class="upgrade-header">
+              <h2 class="upgrade-title">Upgrade Your Plan</h2>
+              <p class="upgrade-subtitle">Get more words and unlock premium features</p>
+            </div>
+
+            <!-- Current Plan Banner -->
+            <div class="current-plan-banner" id="current-plan-banner">
+              <span class="current-plan-label">Current Plan:</span>
+              <span class="current-plan-value" id="current-plan-value">Free</span>
+            </div>
+
+            <!-- Pricing Cards -->
+            <div class="pricing-cards">
+              <!-- Pro Plan -->
+              <div class="pricing-card" id="pro-card">
+                <div class="pricing-card-header">
+                  <span class="plan-badge-popular">Most Popular</span>
+                  <h3 class="plan-title">Pro</h3>
+                  <div class="plan-price">
+                    <span class="price-currency">₹</span>
+                    <span class="price-amount">199</span>
+                    <span class="price-period">/month</span>
+                  </div>
+                </div>
+                <ul class="plan-feature-list">
+                  <li><i data-lucide="check"></i> 20,000 words per day</li>
+                  <li><i data-lucide="check"></i> Priority AI Processing</li>
+                  <li><i data-lucide="check"></i> Advanced Tone Settings</li>
+                  <li><i data-lucide="check"></i> Unlimited History</li>
+                </ul>
+                <button class="plan-upgrade-btn" id="upgrade-pro-btn">
+                  <i data-lucide="zap"></i>
+                  <span>Upgrade to Pro</span>
+                </button>
+              </div>
+
+              <!-- Premium Plan -->
+              <div class="pricing-card premium" id="premium-card">
+                <div class="pricing-card-header">
+                  <h3 class="plan-title">Premium</h3>
+                  <div class="plan-price">
+                    <span class="price-currency">₹</span>
+                    <span class="price-amount">499</span>
+                    <span class="price-period">/month</span>
+                  </div>
+                </div>
+                <ul class="plan-feature-list">
+                  <li><i data-lucide="check"></i> <strong>Unlimited</strong> words</li>
+                  <li><i data-lucide="check"></i> Priority AI Processing</li>
+                  <li><i data-lucide="check"></i> Advanced Tone Settings</li>
+                  <li><i data-lucide="check"></i> API Access (coming soon)</li>
+                </ul>
+                <button class="plan-upgrade-btn premium-btn" id="upgrade-premium-btn">
+                  <i data-lucide="crown"></i>
+                  <span>Go Premium</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="payment-methods">
+              <span class="payment-label">Secure Payment via</span>
+              <div class="payment-icons">
+                <span class="payment-icon">UPI</span>
+                <span class="payment-icon">Cards</span>
+                <span class="payment-icon">NetBanking</span>
+              </div>
+            </div>
+
+            <!-- Guarantee -->
+            <div class="guarantee-badge">
+              <i data-lucide="shield-check"></i>
+              <span>7-Day Money Back Guarantee</span>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="app-footer">
+        <a href="https://www.buymeacoffee.com/amitvis" target="_blank" class="bmc-pill" title="Buy me a coffee">
+          <span class="bmc-emoji">☕</span>
+          <span class="bmc-text">Buy me a coffee</span>
+        </a>
+        <div class="usage-pill">
+          <div class="usage-stats-left">
+            <div class="circular-progress-container">
+              <svg class="circular-progress" viewBox="0 0 36 36">
+                <path class="circle-bg"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path id="circle-progress" class="circle" stroke-dasharray="0, 100"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              </svg>
+              <span id="usage-percent-text" class="percent-text">0%</span>
+            </div>
+            <div class="usage-info-text">
+              <span class="usage-pill-value">
+                <span id="usage-count">0</span>/<span id="usage-limit-total">20k</span>
+              </span>
+            </div>
+          </div>
+          <button id="footer-upgrade-btn" class="upgrade-btn-pill">
+            <i data-lucide="zap"></i>
+            <span>Pro</span>
+          </button>
+        </div>
+      </footer>
+
+      <!-- Loading Overlay -->
+      <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loader-content">
+          <div class="spinner"></div>
+          <p>Refining with AI...</p>
+        </div>
+      </div>
+
+      <!-- Toast Notifications Container -->
+      <div id="toast-container" class="toast-container"></div>
+    </div>
+  </div>
+  <script src="config.js"></script>
+  <script src="supabase-client.js"></script>
+  <script src="auth-service.js"></script>
+  <script src="sidepanel.js"></script>
+  <script src="features/rightClick.js"></script>
+  <script src="features/insertText.js"></script>
+  <script src="features/persona.js"></script>
+  <script src="features/language.js"></script>
+
+  <!-- Plan Activation Success Modal -->
+  <div id="success-modal" class="success-modal-overlay" style="display: none;">
+    <div class="success-modal-card">
+      <div class="success-icon-box">
+        <i data-lucide="party-popper"></i>
+      </div>
+      <h2 id="success-modal-title">Plan Activated!</h2>
+      <p id="success-modal-message">Your RefineAI Premium is now active. Enjoy your unlimited writing powers!</p>
+      <button id="success-close-btn" class="success-close-btn">Let's Go!</button>
+    </div>
+  </div>
+</body>
+
+</html>

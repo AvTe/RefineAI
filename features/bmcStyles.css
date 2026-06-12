@@ -1,0 +1,63 @@
+/* Buy Me A Coffee Button - Footer Row Variant */
+
+/* Make footer a row */
+.app-footer {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 10px 16px !important;
+    gap: 12px;
+}
+
+/* Redefine usage container to take less space and align left */
+.usage-container {
+    width: auto !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Simplify usage info to be cleaner if it's small */
+.usage-info {
+    margin-bottom: 4px;
+}
+
+/* Button Styling - Compact & Flat */
+.bmc-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    /* Minimal look */
+    border: 1px solid #FFDD00;
+    background-color: #FFDD00;
+    /* Keep yellow background but flat */
+    color: #000000 !important;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: 0.75rem;
+    /* Smaller font */
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    margin: 0 !important;
+    /* Reset margins */
+    box-shadow: none !important;
+    /* No shadow as requested */
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.bmc-button:hover {
+    background-color: #FFEA00;
+    transform: none;
+    /* No movement */
+}
+
+.bmc-emoji {
+    font-size: 1rem;
+    margin-right: 6px;
+}

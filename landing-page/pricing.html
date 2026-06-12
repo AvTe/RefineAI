@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing | RefineAI - Upgrade Your Writing</title>
+    <meta name="description"
+        content="Choose the perfect plan for your needs. Get more credits and unlock premium features with RefineAI.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        .pricing-hero {
+            padding: 120px 0 60px;
+            text-align: center;
+            background: linear-gradient(135deg, #FFF7ED 0%, #FFFFFF 100%);
+        }
+
+        .pricing-hero h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        .pricing-hero p {
+            font-size: 1.2rem;
+            color: #64748B;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .pricing-section {
+            padding: 60px 0 100px;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            background: white;
+            border: 1px solid #E2E8F0;
+            border-radius: 20px;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .pricing-card.popular {
+            border: 2px solid #FF8C00;
+            transform: scale(1.05);
+        }
+
+        .pricing-card.popular:hover {
+            transform: scale(1.05) translateY(-8px);
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #FF8C00, #FF6B00);
+            color: white;
+            padding: 6px 20px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .plan-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #0F172A;
+            margin-bottom: 8px;
+        }
+
+        .plan-price {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .price-amount {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #0F172A;
+            letter-spacing: -0.02em;
+        }
+
+        .price-period {
+            font-size: 1rem;
+            color: #64748B;
+        }
+
+        .plan-desc {
+            font-size: 0.9rem;
+            color: #64748B;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .plan-features {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 32px;
+            flex: 1;
+        }
+
+        .plan-features li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            font-size: 0.9rem;
+            color: #334155;
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        .plan-features li:last-child {
+            border-bottom: none;
+        }
+
+        .plan-features li i {
+            width: 18px;
+            height: 18px;
+            color: #22C55E;
+        }
+
+        .plan-features li.disabled {
+            color: #94A3B8;
+        }
+
+        .plan-features li.disabled i {
+            color: #CBD5E1;
+        }
+
+        .plan-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            border: none;
+        }
+
+        .plan-btn.primary {
+            background: linear-gradient(135deg, #FF8C00, #FF6B00);
+            color: white;
+            box-shadow: 0 4px 12px rgba(255, 140, 0, 0.3);
+        }
+
+        .plan-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 140, 0, 0.4);
+        }
+
+        .plan-btn.secondary {
+            background: #F1F5F9;
+            color: #334155;
+            border: 1px solid #E2E8F0;
+        }
+
+        .plan-btn.secondary:hover {
+            background: #E2E8F0;
+        }
+
+        .faq-section {
+            padding: 80px 0;
+            background: #F8FAFC;
+        }
+
+        .faq-section h2 {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 48px;
+        }
+
+        .faq-grid {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .faq-item {
+            background: white;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .faq-item h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0F172A;
+            margin-bottom: 8px;
+        }
+
+        .faq-item p {
+            font-size: 0.9rem;
+            color: #64748B;
+            line-height: 1.6;
+        }
+
+        .money-back {
+            text-align: center;
+            padding: 40px 0;
+            background: linear-gradient(135deg, #FFF7ED 0%, #FFFFFF 100%);
+        }
+
+        .money-back-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            border: 2px solid #22C55E;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            color: #22C55E;
+        }
+
+        .money-back-badge i {
+            width: 24px;
+            height: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .pricing-grid {
+                grid-template-columns: 1fr;
+                max-width: 400px;
+            }
+
+            .pricing-card.popular {
+                transform: none;
+            }
+
+            .pricing-card.popular:hover {
+                transform: translateY(-8px);
+            }
+
+            .pricing-hero h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container nav-content">
+            <a href="index.html" class="logo">
+                <img src="logo.png" alt="RefineAI Logo" class="logo-img">
+                <span>RefineAI</span>
+            </a>
+
+            <nav class="nav-links desktop-nav">
+                <a href="index.html#features">Features</a>
+                <a href="pricing.html" class="active">Pricing</a>
+                <a href="privacy.html">Privacy</a>
+                <a href="https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe"
+                    target="_blank" class="cta-button primary-cta">Install Now</a>
+            </nav>
+
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Menu">
+                <i data-lucide="menu"></i>
+            </button>
+        </div>
+
+        <!-- Mobile Navigation Overlay -->
+        <div class="mobile-nav" id="mobile-nav">
+            <div class="mobile-nav-header">
+                <a href="index.html" class="logo">
+                    <img src="logo.png" alt="RefineAI Logo" class="logo-img">
+                    <span>RefineAI</span>
+                </a>
+                <button class="close-menu" id="close-menu">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="mobile-nav-links">
+                <a href="index.html#features" class="mobile-link">Features</a>
+                <a href="pricing.html" class="mobile-link">Pricing</a>
+                <a href="privacy.html" class="mobile-link">Privacy</a>
+                <a href="https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe"
+                    target="_blank" class="cta-button primary-cta mobile-cta">Install Now</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="pricing-hero">
+            <div class="container">
+                <h1>Simple, Transparent <span class="gradient-text">Pricing</span></h1>
+                <p>Choose the plan that fits your needs. All plans include core features with no hidden fees.</p>
+            </div>
+        </section>
+
+        <section class="pricing-section">
+            <div class="container">
+                <div class="pricing-grid">
+                    <!-- Free Plan -->
+                    <div class="pricing-card">
+                        <h3 class="plan-name">Free</h3>
+                        <div class="plan-price">
+                            <span class="price-amount">₹0</span>
+                            <span class="price-period">/month</span>
+                        </div>
+                        <p class="plan-desc">Perfect for trying out RefineAI and light personal use.</p>
+                        <ul class="plan-features">
+                            <li><i data-lucide="check"></i> 2,000 words per day</li>
+                            <li><i data-lucide="check"></i> Smart Reply Assistant</li>
+                            <li><i data-lucide="check"></i> Email Writer</li>
+                            <li><i data-lucide="check"></i> Text Rewriting</li>
+                            <li><i data-lucide="check"></i> Grammar Check</li>
+                            <li class="disabled"><i data-lucide="x"></i> Priority AI Processing</li>
+                            <li class="disabled"><i data-lucide="x"></i> Advanced Tone Settings</li>
+                        </ul>
+                        <a href="https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe"
+                            target="_blank" class="plan-btn secondary">
+                            Get Started Free
+                        </a>
+                    </div>
+
+                    <!-- Pro Plan -->
+                    <div class="pricing-card popular">
+                        <div class="popular-badge">Most Popular</div>
+                        <h3 class="plan-name">Pro</h3>
+                        <div class="plan-price">
+                            <span class="price-amount">₹199</span>
+                            <span class="price-period">/month</span>
+                        </div>
+                        <p class="plan-desc">For professionals who need more power and flexibility.</p>
+                        <ul class="plan-features">
+                            <li><i data-lucide="check"></i> <strong>20,000 words</strong> per day</li>
+                            <li><i data-lucide="check"></i> Smart Reply Assistant</li>
+                            <li><i data-lucide="check"></i> Email Writer</li>
+                            <li><i data-lucide="check"></i> Text Rewriting</li>
+                            <li><i data-lucide="check"></i> Grammar Check</li>
+                            <li><i data-lucide="check"></i> Priority AI Processing</li>
+                            <li><i data-lucide="check"></i> Advanced Tone Settings</li>
+                        </ul>
+                        <button class="plan-btn primary" id="pro-plan-btn">
+                            <i data-lucide="zap"></i>
+                            Upgrade to Pro
+                        </button>
+                    </div>
+
+                    <!-- Premium Plan -->
+                    <div class="pricing-card">
+                        <h3 class="plan-name">Premium</h3>
+                        <div class="plan-price">
+                            <span class="price-amount">₹499</span>
+                            <span class="price-period">/month</span>
+                        </div>
+                        <p class="plan-desc">Unlimited access for power users and teams.</p>
+                        <ul class="plan-features">
+                            <li><i data-lucide="check"></i> <strong>Unlimited</strong> words</li>
+                            <li><i data-lucide="check"></i> Smart Reply Assistant</li>
+                            <li><i data-lucide="check"></i> Email Writer</li>
+                            <li><i data-lucide="check"></i> Text Rewriting</li>
+                            <li><i data-lucide="check"></i> Grammar Check</li>
+                            <li><i data-lucide="check"></i> Priority AI Processing</li>
+                            <li><i data-lucide="check"></i> API Access (coming soon)</li>
+                        </ul>
+                        <button class="plan-btn primary" id="premium-plan-btn">
+                            <i data-lucide="crown"></i>
+                            Go Premium
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="money-back">
+            <div class="container">
+                <div class="money-back-badge">
+                    <i data-lucide="shield-check"></i>
+                    <span>7-Day Money Back Guarantee</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="faq-section">
+            <div class="container">
+                <h2>Frequently Asked Questions</h2>
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <h3>How do credits work?</h3>
+                        <p>Credits are measured in words. Every text you refine, rewrite, or generate consumes words
+                            from your daily limit. Your limit resets every day at midnight.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>Can I cancel anytime?</h3>
+                        <p>Yes! You can cancel your subscription at any time. You'll continue to have access to premium
+                            features until the end of your billing period.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>What payment methods do you accept?</h3>
+                        <p>We accept all major credit/debit cards, UPI, and net banking through our secure payment
+                            partner Razorpay.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>Do unused credits carry over?</h3>
+                        <p>Daily word limits reset at midnight each day and do not carry over. This ensures fair usage
+                            for all users.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <i data-lucide="sparkles"></i>
+                        <span>RefineAI</span>
+                    </div>
+                    <p>Elevating digital communication through the power of artificial intelligence.</p>
+                </div>
+                <div class="footer-nav">
+                    <h4>Product</h4>
+                    <a href="index.html#features">Features</a>
+                    <a href="pricing.html">Pricing</a>
+                    <a href="https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe"
+                        target="_blank">Install</a>
+                </div>
+                <div class="footer-nav">
+                    <h4>Legal</h4>
+                    <a href="privacy.html">Privacy Policy</a>
+                    <a href="terms.html">Terms of Service</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 RefineAI. Built for professionals everywhere.</p>
+                <div class="social-links">
+                    <a href="https://github.com/Avte/" target="_blank"><i data-lucide="github"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        // Mobile Menu Toggle Logic
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const mobileNav = document.getElementById('mobile-nav');
+        const mobileLinks = document.querySelectorAll('.mobile-link');
+
+        const toggleMenu = () => {
+            mobileNav.classList.toggle('active');
+            document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
+        };
+
+        menuToggle.addEventListener('click', toggleMenu);
+        closeMenu.addEventListener('click', toggleMenu);
+
+        mobileLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                mobileNav.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+        });
+
+        // ============================================
+        // RAZORPAY PAYMENT INTEGRATION
+        // ============================================
+
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://yqoyweqarzezcvdcgnzk.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlxb3l3ZXFhcnplemN2ZGNnbnprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzNzQyMjMsImV4cCI6MjA4NDk1MDIyM30.3v7ERPrD2OhvFTGBJOzFBKABOlUMvxcNFSbbmBR9oRQ';
+
+        // Razorpay Key ID (Test Mode)
+        const RAZORPAY_KEY_ID = 'rzp_test_S9nAMfVpQl4RuF';
+
+        // Plan prices in INR
+        const PLANS = {
+            pro: { amount: 199, name: 'Pro Plan', description: '20,000 words per day' },
+            premium: { amount: 499, name: 'Premium Plan', description: 'Unlimited words' }
+        };
+
+        // Initialize Supabase Client
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Get current user
+        async function getCurrentUser() {
+            const { data: { user }, error } = await supabaseClient.auth.getUser();
+            return user;
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 16px 24px;
+                background: ${type === 'success' ? '#22C55E' : type === 'error' ? '#EF4444' : '#3B82F6'};
+                color: white;
+                border-radius: 12px;
+                font-weight: 600;
+                z-index: 10000;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                animation: slideUp 0.3s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideDown 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Create Razorpay order via Edge Function
+        async function createOrder(planType) {
+            const plan = PLANS[planType];
+            const user = await getCurrentUser();
+
+            if (!user) {
+                showToast('Please login first to upgrade your plan', 'error');
+                // Redirect to extension or show login modal
+                window.open('https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe', '_blank');
+                return null;
+            }
+
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('razorpay-payment', {
+                    body: {
+                        action: 'create_order',
+                        amount: plan.amount,
+                        currency: 'INR',
+                        plan_type: planType,
+                        user_id: user.id,
+                        user_email: user.email
+                    }
+                });
+
+                if (error) throw error;
+                return { ...data, user };
+            } catch (err) {
+                console.error('Order creation failed:', err);
+                showToast('Failed to create order. Please try again.', 'error');
+                return null;
+            }
+        }
+
+        // Verify payment and upgrade user
+        async function verifyPayment(paymentData, planType, userId) {
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('razorpay-payment', {
+                    body: {
+                        action: 'verify_payment',
+                        razorpay_order_id: paymentData.razorpay_order_id,
+                        razorpay_payment_id: paymentData.razorpay_payment_id,
+                        razorpay_signature: paymentData.razorpay_signature,
+                        user_id: userId,
+                        plan_type: planType
+                    }
+                });
+
+                if (error) throw error;
+                return data;
+            } catch (err) {
+                console.error('Payment verification failed:', err);
+                throw err;
+            }
+        }
+
+        // Initialize Razorpay checkout
+        async function initiatePayment(planType) {
+            const plan = PLANS[planType];
+
+            // Show loading
+            const btn = document.getElementById(`${planType}-plan-btn`);
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Processing...';
+            btn.disabled = true;
+
+            try {
+                // Create order
+                const orderData = await createOrder(planType);
+                if (!orderData) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    lucide.createIcons();
+                    return;
+                }
+
+                // Razorpay options
+                const options = {
+                    key: RAZORPAY_KEY_ID,
+                    amount: orderData.amount,
+                    currency: orderData.currency,
+                    name: 'RefineAI',
+                    description: `${plan.name} - ${plan.description}`,
+                    image: 'https://refine-ai-site.vercel.app/logo.png',
+                    order_id: orderData.order_id,
+                    handler: async function (response) {
+                        // Payment successful, verify on server
+                        try {
+                            showToast('Verifying payment...', 'info');
+                            await verifyPayment(response, planType, orderData.user.id);
+                            showToast('🎉 Payment successful! Your plan has been upgraded.', 'success');
+
+                            // Show success message
+                            setTimeout(() => {
+                                alert(`Congratulations! You are now a ${plan.name} member.\n\nPlease refresh your RefineAI extension to see your new plan.`);
+                            }, 1000);
+                        } catch (err) {
+                            showToast('Payment received but verification failed. Please contact support.', 'error');
+                        }
+                    },
+                    prefill: {
+                        email: orderData.user.email,
+                        name: orderData.user.user_metadata?.full_name || ''
+                    },
+                    notes: {
+                        plan_type: planType,
+                        user_id: orderData.user.id
+                    },
+                    theme: {
+                        color: '#FF8C00'
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            showToast('Payment cancelled', 'info');
+                        }
+                    }
+                };
+
+                // Open Razorpay checkout
+                const rzp = new Razorpay(options);
+                rzp.on('payment.failed', function (response) {
+                    showToast(`Payment failed: ${response.error.description}`, 'error');
+                });
+                rzp.open();
+
+            } catch (err) {
+                console.error('Payment initiation failed:', err);
+                showToast('Something went wrong. Please try again.', 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
+
+        // Event listeners for plan buttons
+        document.getElementById('pro-plan-btn').addEventListener('click', function () {
+            initiatePayment('pro');
+        });
+
+        document.getElementById('premium-plan-btn').addEventListener('click', function () {
+            initiatePayment('premium');
+        });
+
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideUp {
+                from { transform: translateX(-50%) translateY(100px); opacity: 0; }
+                to { transform: translateX(-50%) translateY(0); opacity: 1; }
+            }
+            @keyframes slideDown {
+                from { transform: translateX(-50%) translateY(0); opacity: 1; }
+                to { transform: translateX(-50%) translateY(100px); opacity: 0; }
+            }
+            .animate-spin {
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+
+</html>

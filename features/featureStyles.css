@@ -1,0 +1,107 @@
+/* Shared Header Layouts */
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+/* Feature Styles: Language Select */
+.language-select {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    text-transform: uppercase;
+    font-family: var(--font-family);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 24px;
+}
+
+.language-select:hover,
+.language-select:focus {
+    border-color: var(--primary);
+    background-color: var(--bg-app);
+    color: var(--primary);
+}
+
+.language-select option {
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    font-weight: 600;
+    padding: 10px;
+}
+
+.dark-theme .language-select {
+    background-color: #1e293b;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23CBD5E1' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* Persona Section Styles */
+.persona-container {
+    background: var(--bg-surface);
+    padding: 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.persona-label {
+    font-size: 0.65rem;
+    margin-bottom: 8px;
+    display: block;
+    font-weight: 800;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+#persona-input {
+    min-height: 80px;
+    font-size: 0.85rem;
+    padding: 10px !important;
+    background: var(--bg-app) !important;
+    border: 1px solid var(--border) !important;
+    width: 100% !important;
+    border-radius: 6px !important;
+    color: var(--text-main) !important;
+    font-family: var(--font-family) !important;
+    resize: vertical !important;
+    line-height: 1.5 !important;
+    outline: none !important;
+}
+
+/* Action Buttons Header Alignment */
+.editor-header .output-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin: 0;
+}
+
+/* Prominent Smart Reply Button */
+#smart-reply-btn {
+    color: var(--primary);
+    /* Keep button text/stroke primary */
+}
+
+/* Specific styling for the star in the custom SVG */
+#smart-reply-btn svg .star-icon {
+    fill: #FFD700;
+    /* Gold fill */
+    stroke: #FFD700;
+    /* Gold stroke */
+}

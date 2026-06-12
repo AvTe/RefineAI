@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service | RefineAI</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
+        rel="stylesheet">
+    <link rel="icon" type="image/png" href="favicon.png">
+</head>
+
+<body>
+    <header>
+        <div class="container nav-content">
+            <a href="index.html" class="logo">
+                <img src="logo.png" alt="RefineAI Logo" class="logo-img">
+                <span>RefineAI</span>
+            </a>
+
+            <nav class="nav-links desktop-nav">
+                <a href="index.html">Home</a>
+                <a href="privacy.html">Privacy</a>
+                <a href="https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe"
+                    target="_blank" class="cta-button primary-cta">Install Now</a>
+            </nav>
+
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Menu">
+                <i data-lucide="menu"></i>
+            </button>
+        </div>
+
+        <!-- Mobile Navigation Overlay -->
+        <div class="mobile-nav" id="mobile-nav">
+            <div class="mobile-nav-header">
+                <a href="index.html" class="logo">
+                    <img src="logo.png" alt="RefineAI Logo" class="logo-img">
+                    <span>RefineAI</span>
+                </a>
+                <button class="close-menu" id="close-menu">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="mobile-nav-links">
+                <a href="index.html" class="mobile-link">Home</a>
+                <a href="privacy.html" class="mobile-link">Privacy</a>
+                <a href="https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe"
+                    target="_blank" class="cta-button primary-cta mobile-cta">Install Now</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container legal-content">
+        <h1>Terms of Service</h1>
+        <p>Last Updated: January 23, 2026</p>
+
+        <h2>1. Acceptance of Terms</h2>
+        <p>By installing and using the RefineAI Chrome extension, you agree to be bound by these Terms of Service. If
+            you do not agree, please do not use the extension.</p>
+
+        <h2>2. Description of Service</h2>
+        <p>RefineAI provides AI-powered text refinement, rewriting, and reply generation services. We use third-party AI
+            models to process your requests.</p>
+
+        <h2>3. Use of AI</h2>
+        <p>RefineAI uses artificial intelligence to generate content. While we strive for high quality, AI can
+            occasionally produce inaccurate or inappropriate results. You are solely responsible for reviewing and
+            editing any AI-generated content before sending it.</p>
+
+        <h2>4. User Responsibilities</h2>
+        <p>You agree not to use RefineAI for:</p>
+        <ul>
+            <li>Generating spam or unsolicited commercial messages.</li>
+            <li>Creating hateful, harassing, or illegal content.</li>
+            <li>Infringing on the intellectual property of others.</li>
+            <li>Misrepresenting AI-generated content as purely human-written in contexts where disclosure is required.
+            </li>
+        </ul>
+
+        <h2>5. Limitation of Liability</h2>
+        <p>RefineAI is provided "as is" and "as available". We do not warrant that the service will be uninterrupted or
+            error-free. In no event shall RefineAI be liable for any indirect, incidental, or consequential damages
+            arising from your use of the service.</p>
+
+        <h2>6. Termination</h2>
+        <p>We reserve the right to terminate or suspend access to our service at our sole discretion, without notice,
+            for conduct that we believe violates these Terms or is harmful to other users.</p>
+
+        <h2>7. Governing Law</h2>
+        <p>These terms shall be governed by and construed in accordance with the laws of the jurisdiction in which the
+            developer resides.</p>
+    </div>
+
+    <footer>
+        <div class="container footer-content">
+            <p>&copy; 2026 RefineAI. All rights reserved.</p>
+            <div class="footer-links">
+                <a href="index.html">Home</a>
+                <a href="privacy.html">Privacy Policy</a>
+            </div>
+        </div>
+    </footer>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        lucide.createIcons();
+
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const mobileNav = document.getElementById('mobile-nav');
+
+        const toggleMenu = () => {
+            mobileNav.classList.toggle('active');
+            document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
+        };
+
+        menuToggle.addEventListener('click', toggleMenu);
+        closeMenu.addEventListener('click', toggleMenu);
+    </script>
+</body>
+
+</html>
