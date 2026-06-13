@@ -1112,17 +1112,6 @@ If not, refine it before final output.`;
       return;
     }
 
-    // Sort by timestamp
-    const sortedKeys = chatKeys.sort((a, b) => smartChats[b].timestamp - smartChats[a].timestamp);
-
-    // Helper: relative time
-    const relativeTime = (ts) => {
-      const diff = Date.now() - ts;
-      if (diff < 60000) return 'just now';
-      if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-      if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-      return `${Math.floor(diff / 86400000)}d ago`;
-    };
     // Using global escapeHTML helper
 
     // Sort by timestamp
