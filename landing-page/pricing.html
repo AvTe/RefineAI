@@ -14,7 +14,7 @@
         href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <!-- Razorpay SDK Removed -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="icon" type="image/png" href="favicon.png">
     <style>
@@ -429,8 +429,8 @@
                     </div>
                     <div class="faq-item">
                         <h3>What payment methods do you accept?</h3>
-                        <p>We accept all major credit/debit cards, UPI, and net banking through our secure payment
-                            partner Razorpay.</p>
+                        <p>We accept all major credit/debit cards, Apple Pay, Google Pay, and other local options through our secure payment
+                            partner Lemon Squeezy.</p>
                     </div>
                     <div class="faq-item">
                         <h3>Do unused credits carry over?</h3>
@@ -499,20 +499,17 @@
         });
 
         // ============================================
-        // RAZORPAY PAYMENT INTEGRATION
+        // LEMON SQUEEZY PAYMENT INTEGRATION
         // ============================================
 
         // Supabase Configuration
         const SUPABASE_URL = 'https://sizvcdcdcrodxyfbqkau.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpenZjZGNkY3JvZHh5ZmJxa2F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNDcwODYsImV4cCI6MjA5NjgyMzA4Nn0.26EVSOXBzn8XfsNYefz1LpUvQkL5p70dKpYDePa3mGI';
 
-        // Razorpay Key ID (Test Mode)
-        const RAZORPAY_KEY_ID = 'rzp_test_S9nAMfVpQl4RuF';
-
-        // Plan prices in INR
-        const PLANS = {
-            pro: { amount: 199, name: 'Pro Plan', description: '20,000 words per day' },
-            premium: { amount: 499, name: 'Premium Plan', description: 'Unlimited words' }
+        // Lemon Squeezy Checkout Links
+        const LEMONSQUEEZY_CONFIG = {
+            pro: 'https://refine-ai.lemonsqueezy.com/checkout/buy/113b07ec-ff05-4e96-af18-d8865525482d',
+            premium: 'https://refine-ai.lemonsqueezy.com/checkout/buy/faa13f51-3bc0-4b52-ae91-74575c0f1990'
         };
 
         // Initialize Supabase Client
@@ -520,8 +517,12 @@
 
         // Get current user
         async function getCurrentUser() {
-            const { data: { user }, error } = await supabaseClient.auth.getUser();
-            return user;
+            try {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                return user;
+            } catch (e) {
+                return null;
+            }
         }
 
         // Show toast notification
@@ -550,137 +551,45 @@
             }, 3000);
         }
 
-        // Create Razorpay order via Edge Function
-        async function createOrder(planType) {
-            const plan = PLANS[planType];
-            const user = await getCurrentUser();
-
-            if (!user) {
-                showToast('Please login first to upgrade your plan', 'error');
-                // Redirect to extension or show login modal
-                window.open('https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe', '_blank');
-                return null;
-            }
-
-            try {
-                const { data, error } = await supabaseClient.functions.invoke('razorpay-payment', {
-                    body: {
-                        action: 'create_order',
-                        amount: plan.amount,
-                        currency: 'INR',
-                        plan_type: planType,
-                        user_id: user.id,
-                        user_email: user.email
-                    }
-                });
-
-                if (error) throw error;
-                return { ...data, user };
-            } catch (err) {
-                console.error('Order creation failed:', err);
-                showToast('Failed to create order. Please try again.', 'error');
-                return null;
-            }
-        }
-
-        // Verify payment and upgrade user
-        async function verifyPayment(paymentData, planType, userId) {
-            try {
-                const { data, error } = await supabaseClient.functions.invoke('razorpay-payment', {
-                    body: {
-                        action: 'verify_payment',
-                        razorpay_order_id: paymentData.razorpay_order_id,
-                        razorpay_payment_id: paymentData.razorpay_payment_id,
-                        razorpay_signature: paymentData.razorpay_signature,
-                        user_id: userId,
-                        plan_type: planType
-                    }
-                });
-
-                if (error) throw error;
-                return data;
-            } catch (err) {
-                console.error('Payment verification failed:', err);
-                throw err;
-            }
-        }
-
-        // Initialize Razorpay checkout
+        // Redirect to Lemon Squeezy Checkout with User Info
         async function initiatePayment(planType) {
-            const plan = PLANS[planType];
-
-            // Show loading
             const btn = document.getElementById(`${planType}-plan-btn`);
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Processing...';
             btn.disabled = true;
 
             try {
-                // Create order
-                const orderData = await createOrder(planType);
-                if (!orderData) {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    lucide.createIcons();
+                const user = await getCurrentUser();
+                if (!user) {
+                    showToast('Please install the RefineAI extension and log in to upgrade.', 'error');
+                    setTimeout(() => {
+                        window.open('https://chromewebstore.google.com/detail/refineai/flphmkincbiepfekijnkmlmkekijlghe', '_blank');
+                    }, 2000);
                     return;
                 }
 
-                // Razorpay options
-                const options = {
-                    key: RAZORPAY_KEY_ID,
-                    amount: orderData.amount,
-                    currency: orderData.currency,
-                    name: 'RefineAI',
-                    description: `${plan.name} - ${plan.description}`,
-                    image: 'https://refine-ai-site.vercel.app/logo.png',
-                    order_id: orderData.order_id,
-                    handler: async function (response) {
-                        // Payment successful, verify on server
-                        try {
-                            showToast('Verifying payment...', 'info');
-                            await verifyPayment(response, planType, orderData.user.id);
-                            showToast('🎉 Payment successful! Your plan has been upgraded.', 'success');
+                // Construct Lemon Squeezy checkout URL with user identity parameters
+                const checkoutBaseUrl = LEMONSQUEEZY_CONFIG[planType];
+                const url = new URL(checkoutBaseUrl);
+                
+                url.searchParams.set('checkout[email]', user.email);
+                url.searchParams.set('checkout[custom][user_id]', user.id);
+                url.searchParams.set('checkout[passthrough]', user.id);
+                url.searchParams.set('passthrough', user.id);
 
-                            // Show success message
-                            setTimeout(() => {
-                                alert(`Congratulations! You are now a ${plan.name} member.\n\nPlease refresh your RefineAI extension to see your new plan.`);
-                            }, 1000);
-                        } catch (err) {
-                            showToast('Payment received but verification failed. Please contact support.', 'error');
-                        }
-                    },
-                    prefill: {
-                        email: orderData.user.email,
-                        name: orderData.user.user_metadata?.full_name || ''
-                    },
-                    notes: {
-                        plan_type: planType,
-                        user_id: orderData.user.id
-                    },
-                    theme: {
-                        color: '#FF8C00'
-                    },
-                    modal: {
-                        ondismiss: function () {
-                            showToast('Payment cancelled', 'info');
-                        }
-                    }
-                };
-
-                // Open Razorpay checkout
-                const rzp = new Razorpay(options);
-                rzp.on('payment.failed', function (response) {
-                    showToast(`Payment failed: ${response.error.description}`, 'error');
-                });
-                rzp.open();
-
+                showToast('Redirecting to checkout...', 'success');
+                setTimeout(() => {
+                    window.location.href = url.toString();
+                }, 1000);
             } catch (err) {
-                console.error('Payment initiation failed:', err);
+                console.error('Payment redirection failed:', err);
                 showToast('Something went wrong. Please try again.', 'error');
             } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                lucide.createIcons();
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    lucide.createIcons();
+                }, 1500);
             }
         }
 

@@ -11,9 +11,7 @@
     ],
     "host_permissions": [
         "https://*.supabase.co/*",
-        "https://*.razorpay.com/*",
         "https://*.lemonsqueezy.com/*",
-        "https://*.stripe.com/*",
         "https://web.whatsapp.com/*",
         "https://www.linkedin.com/*",
         "https://mail.google.com/*",

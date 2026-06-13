@@ -1,23 +1,89 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+function getCorsHeaders(req: Request) {
+    const origin = req.headers.get("Origin") || "";
+    // Allow local development, extension origins, and Lemon Squeezy itself
+    const isAllowedOrigin = origin.startsWith("chrome-extension://") || 
+                            origin.includes("localhost") || 
+                            origin.includes("127.0.0.1") ||
+                            origin.includes("lemonsqueezy.com");
+    return {
+        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : 'null',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-signature',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    };
+}
+
+/**
+ * Verify Lemon Squeezy webhook signature using HMAC-SHA256
+ */
+async function verifySignature(rawBody: string, signature: string, secret: string): Promise<boolean> {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(secret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+    );
+    
+    const signatureBytes = await crypto.subtle.sign("HMAC", key, encoder.encode(rawBody));
+    const expectedSignature = Array.from(new Uint8Array(signatureBytes))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    
+    return expectedSignature === signature;
+}
 
 serve(async (req) => {
+    const corsHeaders = getCorsHeaders(req);
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
     }
 
     try {
-        const payload = await req.json();
+        // Get the signing secret from environment
+        const SIGNING_SECRET = Deno.env.get("LEMONSQUEEZY_SIGNING_SECRET");
+        if (!SIGNING_SECRET) {
+            console.error("[LemonSqueezy] LEMONSQUEEZY_SIGNING_SECRET not configured");
+            return new Response(JSON.stringify({ error: "Server configuration error" }), { 
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        }
+
+        // Get the signature from headers
+        const signature = req.headers.get("x-signature");
+        if (!signature) {
+            console.error("[LemonSqueezy] Missing X-Signature header");
+            return new Response(JSON.stringify({ error: "Missing signature" }), { 
+                status: 401,
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        }
+
+        // Read the raw body for signature verification
+        const rawBody = await req.text();
+        
+        // Verify the signature BEFORE parsing or trusting any data
+        const isValid = await verifySignature(rawBody, signature, SIGNING_SECRET);
+        if (!isValid) {
+            console.error("[LemonSqueezy] Invalid signature - webhook rejected");
+            return new Response(JSON.stringify({ error: "Invalid signature" }), { 
+                status: 401,
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        }
+
+        // NOW we can safely parse and trust the payload
+        const payload = JSON.parse(rawBody);
         const eventName = payload.meta.event_name;
         const data = payload.data;
 
-        console.log(`[LemonSqueezy] Event received: ${eventName}`);
+        console.log(`[LemonSqueezy] Verified event received: ${eventName}`);
 
         // Initialize Supabase admin client
         const supabase = createClient(

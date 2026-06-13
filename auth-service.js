@@ -413,34 +413,36 @@ async function fetchAndSyncProfile() {
     if (!currentUser) return;
 
     try {
+        // Run daily reset logic server-side via RPC before fetching
+        await window.supabase.rpc('check_and_reset_daily_limit', { user_id: currentUser.id });
+
         const { data, error } = await window.supabase
             .from('profiles')
             .select('*')
             .eq('id', currentUser.id)
             .single();
+
         if (error && (error.code === 'PGRST116' || error.code === '406')) {
-            // Profile doesn't exist, create it
+            // Profile doesn't exist, create it (only supply id and email, DB trigger defaults the rest)
             const { data: newProfile, error: createError } = await window.supabase
                 .from('profiles')
                 .insert([{
                     id: currentUser.id,
-                    email: currentUser.email,
-                    words_used: 0,
-                    daily_limit: window.REFINE_CONFIG.DEFAULT_DAILY_LIMIT,
-                    last_reset_date: new Date().toISOString().split('T')[0]
+                    email: currentUser.email
                 }])
                 .select()
                 .single();
 
             if (createError) {
                 console.error('[RefineAI] Error creating profile:', createError);
-                // Use default profile if creation fails (likely RLS issue)
+                // Use default profile if creation fails
                 userProfile = {
                     id: currentUser.id,
                     email: currentUser.email,
                     words_used: 0,
                     daily_limit: window.REFINE_CONFIG.DEFAULT_DAILY_LIMIT,
-                    last_reset_date: new Date().toISOString().split('T')[0]
+                    last_reset_date: new Date().toISOString().split('T')[0],
+                    plan_type: 'free'
                 };
             } else {
                 userProfile = newProfile;
@@ -453,17 +455,11 @@ async function fetchAndSyncProfile() {
                 email: currentUser.email,
                 words_used: 0,
                 daily_limit: window.REFINE_CONFIG.DEFAULT_DAILY_LIMIT,
-                last_reset_date: new Date().toISOString().split('T')[0]
+                last_reset_date: new Date().toISOString().split('T')[0],
+                plan_type: 'free'
             };
         } else {
             userProfile = data;
-            // Simple client-side reset check
-            const today = new Date().toISOString().split('T')[0];
-            if (userProfile && userProfile.last_reset_date !== today) {
-                userProfile.words_used = 0;
-                userProfile.last_reset_date = today;
-                await updateProfileOnDB({ words_used: 0, last_reset_date: today });
-            }
         }
     } catch (err) {
         console.error('[RefineAI] Unexpected error in fetchAndSyncProfile:', err);
@@ -473,7 +469,8 @@ async function fetchAndSyncProfile() {
             email: currentUser.email,
             words_used: 0,
             daily_limit: window.REFINE_CONFIG.DEFAULT_DAILY_LIMIT,
-            last_reset_date: new Date().toISOString().split('T')[0]
+            last_reset_date: new Date().toISOString().split('T')[0],
+            plan_type: 'free'
         };
     }
 
@@ -481,16 +478,6 @@ async function fetchAndSyncProfile() {
     if (userProfile && window.syncUsageUI) {
         window.syncUsageUI(userProfile.words_used || 0, userProfile.daily_limit || window.REFINE_CONFIG.DEFAULT_DAILY_LIMIT);
     }
-}
-
-async function updateProfileOnDB(updates) {
-    if (!currentUser) return;
-    const { error } = await window.supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', currentUser.id);
-
-    if (error) console.error('Error updating profile:', error);
 }
 
 async function checkLimit(wordCount) {
@@ -505,13 +492,9 @@ async function checkLimit(wordCount) {
 }
 
 async function incrementWordCount(count) {
-    if (!userProfile) return;
-
-    const newCount = userProfile.words_used + count;
-    userProfile.words_used = newCount;
-
-    await updateProfileOnDB({ words_used: newCount });
-    if (window.syncUsageUI) window.syncUsageUI(newCount, userProfile.daily_limit);
+    // Word count is atomically incremented by process-ai on the server.
+    // We simply refetch the profile here to sync the local UI with the updated DB state.
+    await fetchAndSyncProfile();
 }
 
 // ==========================================

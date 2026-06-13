@@ -10,17 +10,22 @@ chrome.runtime.onInstalled.addListener(() => {
     });
 });
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (info.menuItemId === "refineText") {
-        // Open the side panel if it's not already open
-        chrome.sidePanel.open({ tabId: tab.id });
+        // Save text in storage to handle startup race conditions
+        if (chrome.storage?.local) {
+            await chrome.storage.local.set({ pendingRefineText: info.selectionText });
+        }
 
-        // Give it a tiny bit of time to initialize if it just opened
-        setTimeout(() => {
-            chrome.runtime.sendMessage({
-                type: "REFINE_TEXT",
-                text: info.selectionText
-            });
-        }, 500);
+        // Open the side panel
+        chrome.sidePanel.open({ tabId: tab.id }).catch((err) => console.error(err));
+
+        // Send immediately in case the panel is already open
+        chrome.runtime.sendMessage({
+            type: "REFINE_TEXT",
+            text: info.selectionText
+        }).catch(() => {
+            // Ignore error when side panel is not yet open
+        });
     }
 });
